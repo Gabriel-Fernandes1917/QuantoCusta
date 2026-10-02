@@ -9,11 +9,14 @@ export function resolveSiteUrl(value = "http://localhost:3000"): URL {
   return url;
 }
 
+const siteUrl = resolveSiteUrl(process.env.SITE_URL);
+
 export const siteConfig = {
   name: "QuantoCusta",
   slogan: "Quanto custa a vida que você quer?",
   description: "Planeje gastos, moradia e independência financeira com calculadoras simples. Conheça o QuantoCusta e prepare seus próximos passos.",
-  url: resolveSiteUrl(process.env.SITE_URL),
+  url: siteUrl,
+  reportDomain: process.env.REPORT_DOMAIN ?? (siteUrl.hostname === "localhost" || siteUrl.hostname === "127.0.0.1" ? "" : siteUrl.hostname),
 };
 
 export const defaultOpenGraph = {

@@ -80,3 +80,92 @@ h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.15; letter-spacing: -1.3p
 @media (min-width: 600px) { .container { width: min(1120px, calc(100% - 64px)); } nav { gap: 24px; }.tools-grid { grid-template-columns: repeat(2, 1fr); }.hero-art { min-height: 380px; max-width: 440px; width: 100%; justify-self: center; }.closing { flex-direction: row; align-items: center; justify-content: space-between; padding: 36px; } }
 @media (min-width: 960px) { .hero { grid-template-columns: 1.25fr 1fr; gap: 70px; align-items: center; padding-block: 72px 80px; }.hero-art { min-height: 430px; }.art-home { bottom: 114px; width: 166px; height: 132px; left: calc(50% - 83px); }.art-roof { left: 26px; }.art-ground { bottom: 113px; }.art-plant { bottom: 114px; right: 28px; }.art-window { top: 63px; left: 38px; }.art-sun { top: 65px; }.art-caption { bottom: 34px; }.section-heading { display: flex; justify-content: space-between; align-items: end; }.tools-grid { grid-template-columns: repeat(4, 1fr); }.tool-card { padding: 22px; }.tool-card h3 { font-size: 21px; }.principles { grid-template-columns: 1fr 1.2fr; gap: 100px; padding-block: 80px; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Calculadora: mantém as cores e os espaços do portal, com campos confortáveis no celular. */
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: wait; opacity: .65; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid #8a4a1d; outline-offset: 4px; }
+.calculator-page { padding-block: 24px 64px; }
+.calculator-heading { padding-block: 24px 36px; max-width: 720px; }
+.calculator-heading h1 { margin-block: 16px 24px; font-size: clamp(36px, 6vw, 58px); }
+.calculator-heading h1 span { color: #537a3b; }
+.calculator-heading > p:last-child { color: var(--muted); font-size: 17px; line-height: 1.8; max-width: 600px; }
+.calculator-area { display: grid; align-items: start; gap: 28px; }
+.calculator-form, .calculator-results { min-width: 0; }
+.form-intro { margin-bottom: 24px; }
+.form-intro h2 { font-size: 26px; }
+.form-intro p { font-size: 14px; color: var(--muted); line-height: 1.8; margin-top: 12px; }
+.expense-section { border: 1px solid var(--line); border-radius: 12px; background: #fffefa; margin-bottom: 12px; }
+.expense-section summary { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 18px; cursor: pointer; list-style: none; min-height: 66px; }
+.expense-section summary::-webkit-details-marker { display: none; }
+.expense-section summary h3 { font-size: 17px; font-weight: 650; flex: 1 1 140px; }
+.expense-section summary > span:not(.section-chevron) { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.section-chevron { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #eef0df; flex-shrink: 0; font-size: 18px; }
+.expense-section[open] .section-chevron { transform: rotate(45deg); }
+.expense-section[open] summary { border-bottom: 1px solid var(--line); }
+.section-body { padding: 20px 18px; }
+.section-note { font-size: 13px; line-height: 1.7; color: var(--muted); margin-bottom: 20px; }
+.money-grid { display: grid; gap: 20px; }
+.money-field { min-width: 0; }
+.money-field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.5; }
+.money-control { display: flex; align-items: center; gap: 10px; padding-left: 14px; border: 1px solid #a7b6a3; border-radius: 8px; background: white; }
+.money-control > span { font-size: 14px; color: var(--muted); }
+.money-control input { width: 100%; min-width: 0; padding: 14px 10px 14px 0; background: transparent; border: 0; font-size: 16px; color: var(--ink); border-radius: 6px; }
+.money-control:has(input[aria-invalid="true"]) { border-color: #944227; }
+.field-hint { font-size: 12px; line-height: 1.7; color: var(--muted); margin-top: 8px; }
+.field-error { color: #944227; font-size: 13px; line-height: 1.6; margin-top: 8px; }
+.calculator-actions .button { width: 100%; margin-top: 12px; border: 0; gap: 12px; }
+.storage-panel { padding: 20px; margin-top: 20px; border-radius: 10px; background: #f2f4eb; }
+.storage-panel p { font-size: 12px; line-height: 1.8; color: var(--muted); }
+.storage-panel strong { font-weight: 600; color: var(--ink); }
+.storage-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+.storage-actions button { border: 0; background: transparent; min-height: 44px; padding: 4px 0; font-size: 13px; color: var(--green); text-decoration: underline; text-underline-offset: 4px; }
+.calculator-notice { font-size: 13px; line-height: 1.8; margin-top: 12px; }
+.calculator-results { border: 1px solid var(--line); border-radius: 14px; padding: 24px 20px; background: #f2f4eb; }
+.calculator-results:focus { outline: 3px solid var(--green); outline-offset: 4px; }
+.calculator-results h2 { font-size: 24px; line-height: 1.3; margin-top: 12px; }
+.result-total { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -1px; margin-top: 20px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.results-grid { display: grid; gap: 12px; margin-block: 24px; }
+.result-card { background: var(--background); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.result-card dt { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.result-card dd { font-size: 23px; font-weight: 650; margin: 8px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.result-card .field-hint { font-weight: 400; }
+.result-explanation { font-size: 14px; line-height: 1.8; }
+.result-explanation p + p { margin-top: 12px; }
+.expense-breakdown { margin-top: 28px; }
+.expense-breakdown h3 { font-size: 18px; font-weight: 650; }
+.expense-breakdown ul { padding: 0; margin: 24px 0; list-style: none; display: grid; gap: 18px; }
+.distribution-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13px; }
+.distribution-track { height: 8px; background: #dce3d5; border-radius: 10px; margin-top: 8px; overflow: hidden; }
+.distribution-track > div { height: 100%; background: #537a3b; border-radius: inherit; }
+.expense-breakdown li p { font-size: 12px; margin-top: 6px; color: var(--muted); overflow-wrap: anywhere; }
+.secondary-button { padding: 13px 16px; min-height: 48px; border: 1px solid var(--green); border-radius: 8px; color: var(--green); background: transparent; font-size: 14px; width: 100%; }
+.secondary-button:hover { background: #e5eadb; }
+.calculator-guide { max-width: 760px; margin-top: 56px; }
+.calculator-guide h2 { font-size: 28px; margin-bottom: 28px; }
+.calculator-guide h3 { font-size: 18px; font-weight: 650; margin-bottom: 10px; }
+.calculator-guide > div { margin-top: 24px; }
+.calculator-guide p { font-size: 14px; line-height: 1.85; color: var(--muted); }
+.tool-card .text-link { margin-top: 16px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+@media (min-width: 600px) { .money-grid, .results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.section-body { padding: 24px; }.calculator-results { padding: 28px; } }
+@media (min-width: 960px) { .calculator-area:has(.calculator-results) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 36px; }.calculator-heading { padding-bottom: 48px; }.calculator-results .results-grid { grid-template-columns: 1fr; } }
+
+.vehicle-choice { margin: 0 0 24px; padding: 0; border: 0; }
+.vehicle-choice legend { font-size: 15px; font-weight: 600; line-height: 1.6; margin-bottom: 12px; }
+.vehicle-choice > div { display: flex; flex-wrap: wrap; gap: 12px; }
+.vehicle-choice label { display: inline-flex; gap: 10px; align-items: center; min-height: 48px; padding: 10px 20px; border: 1px solid #a7b6a3; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.vehicle-choice label:has(input:checked) { background: #eef0df; border-color: var(--green); }
+.vehicle-choice input { width: 18px; height: 18px; accent-color: var(--green); }
+.vehicle-subsection { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 24px; }
+.vehicle-subsection h4 { font-size: 17px; font-weight: 650; margin: 0 0 12px; }
+.vehicle-field { min-width: 0; }
+.period-control { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.period-control label { font-size: 12px; color: var(--muted); flex: 1 1 100px; }
+.period-control select { background: #f2f4eb; color: var(--ink); border: 1px solid #a7b6a3; border-radius: 6px; padding: 10px; min-height: 44px; font-size: 16px; max-width: 100%; }
+.period-control select:focus-visible { outline: 3px solid #8a4a1d; outline-offset: 4px; }
+.export-panel { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
+.export-panel h3 { font-size: 18px; font-weight: 650; margin-bottom: 12px; line-height: 1.4; }
+.export-panel > p:not(.field-hint):not(.calculator-notice) { font-size: 14px; line-height: 1.8; color: var(--muted); }
+.export-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 18px; }
+.export-actions .secondary-button { flex: 1 1 130px; }
