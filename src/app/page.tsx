@@ -13,7 +13,7 @@ export default function Home() {
           <h1 id="hero-title">Quanto custa a vida que <span>você quer?</span></h1>
           <p className="hero-description">Morar sozinho, encontrar seu canto, dar o próximo passo. O QuantoCusta ajuda você a planejar gastos, moradia e independência financeira usando calculadoras simples.</p>
           <a href="/calculadora-custo-de-vida/" className="button">Calcular meu custo de vida <span aria-hidden="true">↗</span></a>
-          <p className="hero-note">Comece pelo seu custo de vida. As outras ferramentas estão em preparação.</p>
+          <p className="hero-note">Comece pelo seu custo de vida ou compare o custo real de dois imóveis. Mais ferramentas estão em preparação.</p>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="art-sun" />
@@ -35,7 +35,7 @@ export default function Home() {
                 <p className="tool-tag">{tool.tag}</p>
                 <h3>{tool.title}</h3>
                 <p className="tool-description">{tool.description}</p>
-                {"href" in tool && <a className="text-link" href={tool.href}>Abrir calculadora →</a>}
+                {"href" in tool && <a className="text-link" href={tool.href}>Abrir ferramenta →</a>}
               </article>
             ))}
           </div>

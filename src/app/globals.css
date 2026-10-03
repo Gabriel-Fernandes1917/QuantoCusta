@@ -169,3 +169,40 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .export-panel > p:not(.field-hint):not(.calculator-notice) { font-size: 14px; line-height: 1.8; color: var(--muted); }
 .export-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 18px; }
 .export-actions .secondary-button { flex: 1 1 130px; }
+/* Comparador: cards verticais no celular e cenários lado a lado no desktop. */
+.comparison-area { display: grid; gap: 32px; }
+.property-columns { display: grid; gap: 24px; }
+.property-form { min-width: 0; }
+.property-form > h2 { font-size: 25px; margin-bottom: 20px; }
+.plain-field { margin-bottom: 20px; }
+.plain-field label, .custom-cost > label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.plain-field input, .plain-field select, .custom-cost > input, .custom-cost > select { width: 100%; min-width: 0; padding: 13px; border: 1px solid #a7b6a3; border-radius: 8px; background: white; color: var(--ink); font: inherit; font-size: 16px; }
+select:focus-visible { outline: 3px solid #8a4a1d; outline-offset: 4px; }
+.included-group { padding: 0; margin: 0 0 24px; border: 0; }
+.included-group legend { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.included-group label { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 14px; }
+.included-group input { width: 20px; height: 20px; accent-color: var(--green); }
+.custom-costs { margin-top: 20px; }
+.custom-cost { padding: 16px; background: #f2f4eb; border-radius: 8px; margin-bottom: 16px; }
+.custom-cost > input, .custom-cost > select { margin-bottom: 16px; }
+.custom-cost .text-link { border: 0; background: transparent; text-decoration: underline; }
+.property-form .section-body > details { margin-block: 18px; }
+.property-form .section-body > details > summary { cursor: pointer; min-height: 44px; font-size: 14px; padding-block: 12px; }
+.checklist-panel { padding-block: 24px; }
+.checklist-panel h2 { font-size: 25px; margin-bottom: 16px; }
+.impact-card { padding: 20px; border: 1px solid var(--line); border-radius: 10px; margin-top: 16px; }
+.impact-card p { font-size: 14px; line-height: 1.8; }
+.impact-card .vehicle-choice { margin-top: 16px; }
+.scenario-card { background: var(--background); padding: 20px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; overflow-wrap: anywhere; }
+.scenario-card h3 { margin-top: 8px; font-size: 22px; }
+.scenario-card dl { margin-block: 24px; }
+.comparison-pair { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-block: 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.comparison-pair dd { margin: 0; font-weight: 600; }
+.comparison-results .property-columns { margin-top: 24px; }
+.comparison-results .result-explanation { margin-top: 24px; }
+.comparison-detail { margin-block: 28px; }
+.comparison-detail h3 { font-size: 20px; }
+.detail-card { background: var(--background); padding: 16px; border-radius: 8px; margin-top: 12px; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.detail-card > span { display: block; color: var(--muted); font-size: 12px; }
+.comparison-results > details > summary { min-height: 44px; cursor: pointer; }
+@media (min-width: 800px) { .property-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -2,7 +2,7 @@
 
 **Quanto custa a vida que você quer?**
 
-Portal brasileiro de planejamento de gastos, moradia e independência financeira. Inclui Home, privacidade e a calculadora de custo de vida em `/calculadora-custo-de-vida/`. As outras três ferramentas continuam **Em breve**, sem funcionalidades simuladas.
+Portal brasileiro de planejamento de gastos, moradia e independência financeira. Inclui Home, privacidade, a calculadora de custo de vida em `/calculadora-custo-de-vida/` e o comparador em `/comparar-imoveis/`. As duas outras ferramentas continuam **Em breve**.
 
 ## Stack
 
@@ -105,4 +105,18 @@ Altere nome e slogan em `src/lib/site-config.ts`, texto da Home em `src/app/page
 
 Depois da aprovação da próxima etapa, uma nova calculadora deverá ter sua rota em `src/app/`, interface em `src/components/calculators/`, funções puras em `src/lib/calculations/` e testes em `tests/`. Reutilize os componentes monetários e de resultados. Acrescente a rota ao sitemap e disponibilize seu card em `src/lib/tools.ts` apenas quando funcional.
 
-API, cidades, contas, histórico, monetização e as outras três calculadoras permanecem fora desta etapa.
+API, cidades, contas, histórico, monetização e as outras calculadoras permanecem fora desta etapa.
+
+## Comparador de imóveis
+
+`src/lib/calculations/property-comparison.ts` contém o modelo e funções puras de comparação, checklist, custos e deslocamento. A interface está em `src/components/calculators/property-comparison.tsx`, o armazenamento versionado em `src/lib/property-storage.ts` e os relatórios em `src/lib/export/property-comparison.ts`. Nenhuma dependência foi adicionada.
+
+Os custos diretos somam aluguel/parcela/outro valor principal, condomínio, IPTU, garagem e custos personalizados. O total acrescenta serviços confirmados pelo usuário, transporte, alimentação relacionada à rotina e outros impactos. Diferenças são B − A, sem recomendação de imóvel. Itens anuais reutilizam a conversão inteira existente: `floor((centavos + 6) / 12)`. Total anual = mensal × 12; arredondamentos podem diferir até R$ 0,06 por item do valor anual original.
+
+IPTU e garagem têm uma única origem: o checklist oferece atalhos para os mesmos campos diretos. Quando incluídos, seus valores separados ficam fora do cálculo. Outros serviços só entram quando o usuário confirma o impacto; respostas sem confirmação não recebem preço. Valores de diferenças que deixaram de existir também não entram nos resultados. Custos personalizados podem repetir qualquer despesa; a interface orienta a revisão porque não é possível inferir pelo nome se dois gastos são o mesmo.
+
+O formulário usa seções nativas recolhíveis e cards verticais no celular; a partir de 800px os dois imóveis aparecem lado a lado. Deslocamento semanal = (minutos ida + volta) × dias ÷ 60; anual = semanal × 52; mensal = anual ÷ 12. Não desconta férias e feriados nem converte horas em dinheiro. Campos numéricos aceitam minutos entre 0 e 1440 e dias entre 0 e 7.
+
+Salvar é explícito e usa a chave independente `quantocusta:property-comparison:v1`. A restauração valida o formato antes de usar os dados. Limpar remove apenas essa comparação, preservando a calculadora de custo de vida. O PDF é um relatório A4 paginado de comparação; o Excel contém Resumo, Comparação detalhada e Premissas, com valores monetários numéricos e periodicidades originais. A data de geração usa Brasília. Caracteres sem suporte na fonte padrão do PDF (como emojis) são substituídos por `?` apenas no relatório.
+
+`tests/property-comparison.test.ts` cobre os vinte cenários solicitados, o exemplo completo (A: R$ 2.680/mês; B: R$ 3.120/mês; diferença R$ 440/mês e 32,5 horas/mês), validação de armazenamento e geração dos arquivos PDF/XLSX.
