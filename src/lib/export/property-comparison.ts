@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
-import { comparisonNotes, type ComparisonResult } from "../calculations/property-comparison";
+import { breakEvenNote, breakEvenText, comparisonNotes, periodLabels, type Detail, type ComparisonResult } from "../calculations/property-comparison";
 import { formatMoney } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
 
@@ -8,12 +8,13 @@ export function comparisonSummary(result: ComparisonResult) {
   const [a, b] = result.scenarios;
   return [
     { label: "Custo direto", a: a.direct, b: b.direct, money: true },
-    { label: "Custos adicionais identificados", a: a.additional, b: b.additional, money: true },
+    { label: "Custos recorrentes adicionais", a: a.additional, b: b.additional, money: true },
     { label: "Transporte", a: a.transport, b: b.transport, money: true },
     { label: "Alimentação relacionada", a: a.food, b: b.food, money: true },
     { label: "Outros impactos", a: a.other, b: b.other, money: true },
-    { label: "Custo total mensal", a: a.total, b: b.total, money: true },
-    { label: "Custo total anual", a: a.annual, b: b.annual, money: true },
+    { label: "Custo recorrente mensal", a: a.total, b: b.total, money: true },
+    { label: "Custo recorrente anual", a: a.annual, b: b.annual, money: true },
+    { label: "Custos únicos", a: a.unique, b: b.unique, money: true },
     { label: "Deslocamento semanal (horas)", a: a.commute.weekly, b: b.commute.weekly, money: false },
     { label: "Deslocamento mensal (horas)", a: a.commute.monthly, b: b.commute.monthly, money: false },
     { label: "Deslocamento anual (horas)", a: a.commute.annual, b: b.commute.annual, money: false },
@@ -24,12 +25,21 @@ const number = (value: number, money = true): Cell => ({ value: money ? value / 
 export function comparisonSheets(result: ComparisonResult, options: ReportOptions): Sheet<Blob>[] {
   const [a, b] = result.scenarios;
   const summary: Row[] = [[header("Comparação de imóveis"), header(options.brand.name)], ["Data", reportDate(options.generatedAt)], ["Diferenças: B − A"], ["Item", `A: ${a.name}`, `B: ${b.name}`, "Diferença"].map(header), ...comparisonSummary(result).map(r => [r.label, number(r.a, r.money), number(r.b, r.money), number(r.b - r.a, r.money)])];
-  const detail: Row[] = [["Categoria", "Item", "Periodicidade A", "Periodicidade B", "A informado", "B informado", "A mensal", "B mensal", "Diferença mensal"].map(header), ...result.details.map(d => [d.category, d.item, d.periodA === "annual" ? "Anual" : "Mensal", d.periodB === "annual" ? "Anual" : "Mensal", number(d.informedA), number(d.informedB), number(d.a), number(d.b), number(d.b - d.a)])];
+  summary.push(["Diferença recorrente mensal (B − A)", number(result.delta.monthly)], ["Diferença recorrente anual (B − A)", number(result.delta.annual)], ["Diferença de custos únicos (B − A)", number(result.delta.unique)]);
+  if (result.breakEven) summary.push(["Ponto de equilíbrio (meses)", number(result.breakEven.months, false)], ["Comparação matemática", { value: breakEvenText(result), wrap: true, height: 64 }], ["Premissa do ponto de equilíbrio", { value: breakEvenNote, wrap: true, height: 64 }]);
+  const detail: Row[] = [["Categoria", "Item", "Periodicidade A", "Periodicidade B", "A informado", "B informado", "A mensal", "B mensal", "Diferença mensal", "A único", "B único", "Diferença de custos únicos", "Diferença informada (mesma periodicidade)"].map(header), ...result.details.map(d => [d.category, d.item, periodLabels[d.periodA], periodLabels[d.periodB], number(d.informedA), number(d.informedB), d.periodA === "once" ? null : number(d.a), d.periodB === "once" ? null : number(d.b), d.periodA === "once" && d.periodB === "once" ? null : number(d.b - d.a), number(d.uniqueA), number(d.uniqueB), number(d.uniqueB - d.uniqueA), d.periodA === d.periodB ? number(d.informedB - d.informedA) : null])];
   const notes: Row[] = [[header("Premissas e itens incluídos"), header("Conteúdo")], ["A: " + a.name, a.included.join(", ") || "Nenhum item marcado"], ["B: " + b.name, b.included.join(", ") || "Nenhum item marcado"], ...comparisonNotes.map(note => ["Premissa", { value: note, wrap: true, height: 64 }]), ["Planilha editável", { value: "Valores numéricos sem fórmulas vinculadas: editar as células não recalcula os totais.", wrap: true, height: 44 }], ["Créditos", reportFooter(options.brand)]];
   if (result.unanswered.length) notes.push(["Sem resposta", { value: `Diferenças sem custo atribuído: ${result.unanswered.join(", ")}.`, wrap: true, height: 44 }]);
-  return [{ sheet: "Resumo", data: summary, columns: [42, 32, 32, 26].map(width => ({ width })), showGridLines: false }, { sheet: "Comparação detalhada", data: detail, columns: [26, 32, 18, 18, 24, 24, 24, 24, 24].map(width => ({ width })), showGridLines: false }, { sheet: "Premissas", data: notes, columns: [{ width: 30 }, { width: 95 }], showGridLines: false }];
+  return [{ sheet: "Resumo", data: summary, columns: [42, 32, 32, 26].map(width => ({ width })), showGridLines: false }, { sheet: "Comparação detalhada", data: detail, columns: [26, 32, 18, 18, 24, 24, 24, 24, 24, 24, 24, 28, 32].map(width => ({ width })), showGridLines: false }, { sheet: "Premissas", data: notes, columns: [{ width: 30 }, { width: 95 }], showGridLines: false }];
 }
 export async function createComparisonExcel(result: ComparisonResult, options: ReportOptions) { return writeExcelFile(comparisonSheets(result, options), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
+
+export function comparisonDetailLines(d: Detail) {
+  const lines = [`${d.category} - ${d.item}: A ${formatMoney(d.informedA)} (${periodLabels[d.periodA]}) | B ${formatMoney(d.informedB)} (${periodLabels[d.periodB]})`];
+  if (d.periodA !== "once" || d.periodB !== "once") lines.push(`Equivalente mensal: A ${d.periodA === "once" ? "sem equivalente mensal" : formatMoney(d.a)} | B ${d.periodB === "once" ? "sem equivalente mensal" : formatMoney(d.b)} | Diferença recorrente mensal ${formatMoney(d.b - d.a)}`);
+  if (d.periodA === "once" || d.periodB === "once") lines.push(`Custos únicos: A ${formatMoney(d.uniqueA)} | B ${formatMoney(d.uniqueB)} | Diferença ${formatMoney(d.uniqueB - d.uniqueA)}`);
+  return lines;
+}
 
 export async function createComparisonPdf(result: ComparisonResult, options: ReportOptions) {
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -56,10 +66,13 @@ export async function createComparisonPdf(result: ComparisonResult, options: Rep
   text(`A: ${a.name} | B: ${b.name}`, true); text("Diferença = B - A. Dinheiro e tempo são métricas separadas.");
   text("Resumo lado a lado: A | B | Diferença", true);
   comparisonSummary(result).forEach(r => { const format = (n: number) => r.money ? formatMoney(n) : `${n.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} h`; text(`${r.label}: ${format(r.a)} | ${format(r.b)} | ${format(r.b - r.a)}`); });
-  text("Detalhamento: equivalentes mensais", true);
+  text(`Diferença recorrente mensal: ${formatMoney(result.delta.monthly)}`);
+  text(`Diferença recorrente anual: ${formatMoney(result.delta.annual)}`);
+  text(`Diferença de custos únicos: ${formatMoney(result.delta.unique)}`);
+  if (result.breakEven) { text("Ponto de equilíbrio matemático", true); breakEvenText(result).split("\n\n").forEach(paragraph => text(paragraph)); text(breakEvenNote); }
+  text("Detalhamento: recorrentes e únicos separados", true);
   result.details.filter(d => d.a || d.b || d.informedA || d.informedB).forEach(d => {
-    text(`${d.category} - ${d.item}: A ${formatMoney(d.a)} | B ${formatMoney(d.b)} | Diferença ${formatMoney(d.b - d.a)}`);
-    if (d.periodA === "annual" || d.periodB === "annual") text(`Valores informados: A ${formatMoney(d.informedA)}/${d.periodA === "annual" ? "ano" : "mês"}; B ${formatMoney(d.informedB)}/${d.periodB === "annual" ? "ano" : "mês"}.`);
+    comparisonDetailLines(d).forEach(line => text(line));
   });
   text("Itens incluídos e serviços disponíveis", true); text(`A: ${a.included.join(", ") || "Nenhum item marcado"}`); text(`B: ${b.included.join(", ") || "Nenhum item marcado"}`);
   text("Premissas", true); comparisonNotes.forEach(note => text(note));

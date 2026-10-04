@@ -206,3 +206,14 @@ select:focus-visible { outline: 3px solid #8a4a1d; outline-offset: 4px; }
 .detail-card > span { display: block; color: var(--muted); font-size: 12px; }
 .comparison-results > details > summary { min-height: 44px; cursor: pointer; }
 @media (min-width: 800px) { .property-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Alimentação: reaproveita os campos, seções e cards existentes. */
+.meal-calculator h4 { font-size: 16px; font-weight: 650; line-height: 1.6; }
+.meal-ingredient { margin-block: 16px; }
+.meal-remove { border: 0; background: transparent; text-decoration: underline; padding: 8px 0; margin-top: 12px; color: var(--green); }
+.meal-outside-title, .meal-optional, .meal-new { margin-top: 24px; }
+.meal-results .property-columns, .meal-results .result-explanation { margin-top: 24px; }
+.meal-period { padding-block: 12px; border-bottom: 1px solid var(--line); }
+.meal-period dt { font-weight: 600; }
+.meal-period dd { margin: 8px 0 0; }
+.meal-calculator .section-body, .meal-calculator summary { overflow-wrap: anywhere; min-width: 0; }

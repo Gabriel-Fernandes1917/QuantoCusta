@@ -2,7 +2,7 @@
 
 **Quanto custa a vida que você quer?**
 
-Portal brasileiro de planejamento de gastos, moradia e independência financeira. Inclui Home, privacidade, a calculadora de custo de vida em `/calculadora-custo-de-vida/` e o comparador em `/comparar-imoveis/`. As duas outras ferramentas continuam **Em breve**.
+Portal brasileiro de planejamento de gastos, moradia e independência financeira. Inclui Home, privacidade, a calculadora de custo de vida em `/calculadora-custo-de-vida/`, o comparador em `/comparar-imoveis/` e a ferramenta de alimentação em `/comer-fora-ou-cozinhar/`. As ferramentas de mudança e reserva continuam **Em breve**.
 
 ## Stack
 
@@ -120,3 +120,23 @@ O formulário usa seções nativas recolhíveis e cards verticais no celular; a 
 Salvar é explícito e usa a chave independente `quantocusta:property-comparison:v1`. A restauração valida o formato antes de usar os dados. Limpar remove apenas essa comparação, preservando a calculadora de custo de vida. O PDF é um relatório A4 paginado de comparação; o Excel contém Resumo, Comparação detalhada e Premissas, com valores monetários numéricos e periodicidades originais. A data de geração usa Brasília. Caracteres sem suporte na fonte padrão do PDF (como emojis) são substituídos por `?` apenas no relatório.
 
 `tests/property-comparison.test.ts` cobre os vinte cenários solicitados, o exemplo completo (A: R$ 2.680/mês; B: R$ 3.120/mês; diferença R$ 440/mês e 32,5 horas/mês), validação de armazenamento e geração dos arquivos PDF/XLSX.
+
+## Comer fora ou cozinhar?
+
+`src/lib/calculations/meal-comparison.ts` contém as funções puras, `src/components/calculators/meal-comparison.tsx` a interface, `src/lib/meal-storage.ts` a persistência e `src/lib/export/meal-comparison.ts` os relatórios. A rota é `/comer-fora-ou-cozinhar/`, com card na Home, canonical, Open Graph e sitemap. Nenhuma dependência foi adicionada.
+
+Cada refeição tem identificador, nome, inclusão explícita na comparação, frequência semanal, ingredientes e preço por refeição fora. Cada ingrediente tem identificador, nome, quantidade/unidade utilizada, preço em centavos e quantidade/unidade comprada. As unidades são g/kg, ml/L e unidade; massa não é convertida em volume. Os campos começam vazios, sem preços de exemplo. As quatro refeições iniciais são opcionais e podem ser removidas; refeições personalizadas também podem ser criadas.
+
+Custo proporcional = preço da compra × quantidade utilizada normalizada ÷ quantidade comprada normalizada. Quantidades aceitam seis casas decimais e usam proporções inteiras com `BigInt` durante o cálculo; valores persistidos e resultados são números, com dinheiro em centavos. Cada ingrediente é arredondado ao centavo, metade para cima, antes da soma da refeição. Custo semanal = custo por refeição × frequência; anual = custo por refeição × frequência × 52; mensal = anual ÷ 12. Cada período é arredondado separadamente, então o anual pode diferir alguns centavos do mensal × 12. O total geral soma os períodos de cada refeição.
+
+Gás, energia e outros custos de preparo são estimativas mensais opcionais. Entram somente no total em casa, sem rateio entre refeições. Distribuições e insights usam refeições, nunca rankings de ingredientes. Maior e menor diferença comparam a magnitude mensal e explicam a direção: custo em casa a mais ou a menos. Empates são mostrados juntos. Ingredientes ficam no detalhamento de auditoria.
+
+Tempo de compras, preparo, limpeza e compra fora é informado em horas semanais. Mensal = semanal × 52/12; anual = semanal × 52, separado de dinheiro. Até 168 horas por cenário/semana, 20 refeições e 50 ingredientes por refeição; frequência de até 1.000 por semana. Quantidades inválidas, unidades incompatíveis e divisão por zero são rejeitadas.
+
+Salvar é explícito na chave independente `quantocusta:meal-comparison:v1`; limpar remove somente essa rotina. O formato salvo é versão 2: preço fora, frequência e quantidades/preços dos ingredientes usam `null` para dados não informados, mantendo zero explícito como número. Campos opcionais de preparo e tempo vazios continuam sem acréscimo. Refeições incompletas são sinalizadas junto aos campos e excluídas dos totais, insights e linhas de custos exportadas; refeições completas continuam comparáveis. O relatório informa quais ficaram de fora, e exportação exige pelo menos uma refeição completa. Rascunhos incompletos podem ser salvos.
+
+Na leitura de registros da versão 1, valores positivos são preservados, mas zeros essenciais passam a não informados e precisam ser confirmados. O formato antigo não permitia saber se esses zeros haviam sido digitados ou eram campos vazios. A migração não escreve automaticamente no armazenamento.
+
+PDF A4 paginado e Excel com abas Resumo, Refeições, Detalhamento e Premissas recebem somente o resultado calculado e são carregados ao exportar. XLSX contém números editáveis, sem recálculo automático; PDF substitui caracteres não suportados pela fonte padrão. A diferença de tempo é apresentada como horas a mais no cenário correspondente, sem números negativos na mensagem principal. Maior/menor diferença mantêm a mesma matemática e indicam qual cenário custa menos por mês. Singular/plural de unidades é compartilhado com os relatórios, sem alterar nomes digitados. Os testes em `tests/meal-comparison.test.ts` e `tests/meal-refinements.test.ts` cobrem unidades, proporções, refeições, frequência, direção das diferenças, preparo, tempo, vazio/zero, migração, gramática, persistência e relatórios.
+
+Não há avaliação nutricional, recomendações de alimentos, receitas, preços externos ou monetização do tempo. Esta versão compara a mesma frequência nos dois cenários; não implementa rotina híbrida. Dados financeiros não são enviados à rede.

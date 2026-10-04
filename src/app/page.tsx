@@ -13,7 +13,7 @@ export default function Home() {
           <h1 id="hero-title">Quanto custa a vida que <span>você quer?</span></h1>
           <p className="hero-description">Morar sozinho, encontrar seu canto, dar o próximo passo. O QuantoCusta ajuda você a planejar gastos, moradia e independência financeira usando calculadoras simples.</p>
           <a href="/calculadora-custo-de-vida/" className="button">Calcular meu custo de vida <span aria-hidden="true">↗</span></a>
-          <p className="hero-note">Comece pelo seu custo de vida ou compare o custo real de dois imóveis. Mais ferramentas estão em preparação.</p>
+          <p className="hero-note">Planeje seu custo de vida, compare imóveis ou descubra quanto custa preparar suas refeições e comprar fora.</p>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="art-sun" />
@@ -27,7 +27,7 @@ export default function Home() {
 
       <section id="ferramentas" className="tools-section" aria-labelledby="tools-title">
         <div className="container">
-          <div className="section-heading"><div><p className="eyebrow">Do primeiro plano à casa nova</p><h2 id="tools-title">Menos dúvidas.<br />Mais clareza nas contas.</h2></div><p>Quatro ferramentas para transformar perguntas grandes em próximos passos possíveis.</p></div>
+          <div className="section-heading"><div><p className="eyebrow">Do primeiro plano à casa nova</p><h2 id="tools-title">Menos dúvidas.<br />Mais clareza nas contas.</h2></div><p>Ferramentas para transformar perguntas grandes em próximos passos possíveis.</p></div>
           <div className="tools-grid">
             {tools.map((tool) => (
               <article className="tool-card" key={tool.number}>

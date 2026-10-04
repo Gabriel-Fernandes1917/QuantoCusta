@@ -3,5 +3,5 @@ import { siteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-static";
 export default function sitemap(): MetadataRoute.Sitemap {
-  return ["/", "/privacidade/", "/calculadora-custo-de-vida/", "/comparar-imoveis/"].map((path) => ({ url: new URL(path, siteConfig.url).href }));
+  return ["/", "/privacidade/", "/calculadora-custo-de-vida/", "/comparar-imoveis/", "/comer-fora-ou-cozinhar/"].map((path) => ({ url: new URL(path, siteConfig.url).href }));
 }
