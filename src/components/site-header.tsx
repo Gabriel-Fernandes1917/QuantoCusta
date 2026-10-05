@@ -9,7 +9,8 @@ export function SiteHeader() {
           {siteConfig.name}
         </a>
         <nav aria-label="Navegação principal">
-          <a className="nav-link" href="/#ferramentas">Ferramentas</a>
+          <a className="nav-link" href="/#vida">Vida</a>
+          <a className="nav-link" href="/#viagens">Viagens</a>
           <a className="nav-link" href="/privacidade/">Privacidade</a>
         </nav>
       </div>

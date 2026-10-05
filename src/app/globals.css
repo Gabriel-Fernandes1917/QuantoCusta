@@ -51,6 +51,21 @@ h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.15; letter-spacing: -1.3p
 .section-heading h2, .principles h2 { margin-top: 14px; }
 .section-heading > p { font-size: 15px; color: var(--muted); line-height: 1.8; max-width: 350px; }
 .tools-grid { display: grid; gap: 16px; }
+.planning-shortcuts { display: grid; gap: 12px; margin-top: 28px; }
+.planning-shortcuts > p { grid-column: 1 / -1; font-size: 13px; font-weight: 600; }
+.planning-shortcuts > a { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.planning-shortcuts > a:hover { background: #f2f4eb; }
+.planning-shortcuts strong { font-size: 14px; font-weight: 600; }
+.planning-shortcuts > a > span { font-size: 12px; line-height: 1.6; color: var(--muted); }
+.travel-section { background: var(--background); border-top: 0; }
+.travel-section .tool-card { background: #f2f4eb; }
+.travel-section .section-heading h2 { max-width: 600px; }
+.life-section .tool-card { display: flex; flex-direction: column; }
+.life-section .tool-description { flex: 1; }
+.life-section .text-link { margin-top: 12px; }
+@media (min-width: 600px) { .planning-shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .life-section .tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .travel-section .tools-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .life-section .tools-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .tool-card { padding: 25px; background: var(--background); border: 1px solid var(--line); border-radius: 12px; }
 .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 34px; }
 .tool-number { font-size: 22px; font-weight: 650; color: #728467; }
@@ -217,3 +232,23 @@ select:focus-visible { outline: 3px solid #8a4a1d; outline-offset: 4px; }
 .meal-period dt { font-weight: 600; }
 .meal-period dd { margin: 8px 0 0; }
 .meal-calculator .section-body, .meal-calculator summary { overflow-wrap: anywhere; min-width: 0; }
+
+.vehicle-periodic-cost { min-width: 0; grid-column: 1 / -1; container-type: inline-size; }
+.vehicle-periodic-row { display: grid; gap: 16px; }
+.vehicle-periodic-row .plain-field { min-width: 0; margin-bottom: 0; }
+.vehicle-periodic-row label { line-height: 1.5; }
+.vehicle-comparison-note { margin-block: 24px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+.vehicle-comparison-note h3 { font-size: 15px; margin: 0 0 8px; }
+.vehicle-comparison-note p { margin: 0; }
+@container (min-width: 480px) { .vehicle-periodic-row { grid-template-columns: minmax(0, 1fr) 210px; align-items: start; } }
+
+/* Hospedagens: seções e cenários confortáveis em telas estreitas. */
+.lodging-calculator .section-body, .lodging-calculator summary { min-width: 0; overflow-wrap: anywhere; }
+.lodging-calculator .money-control > span { flex-shrink: 0; white-space: nowrap; }
+.lodging-calculator h4 { font-size: 16px; font-weight: 650; line-height: 1.6; margin-bottom: 12px; }
+.lodging-calculator h5 { font-size: 14px; font-weight: 600; line-height: 1.6; margin-bottom: 12px; }
+.lodging-included { margin-top: 24px; }
+.lodging-meal + .lodging-meal { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 20px; }
+.lodging-remove { border: 0; background: transparent; color: var(--green); text-decoration: underline; }
+.lodging-results .distribution-label { flex-wrap: wrap; gap: 8px; }
+.lodging-results .comparison-detail > p { margin-top: 16px; }

@@ -140,3 +140,35 @@ Na leitura de registros da versão 1, valores positivos são preservados, mas ze
 PDF A4 paginado e Excel com abas Resumo, Refeições, Detalhamento e Premissas recebem somente o resultado calculado e são carregados ao exportar. XLSX contém números editáveis, sem recálculo automático; PDF substitui caracteres não suportados pela fonte padrão. A diferença de tempo é apresentada como horas a mais no cenário correspondente, sem números negativos na mensagem principal. Maior/menor diferença mantêm a mesma matemática e indicam qual cenário custa menos por mês. Singular/plural de unidades é compartilhado com os relatórios, sem alterar nomes digitados. Os testes em `tests/meal-comparison.test.ts` e `tests/meal-refinements.test.ts` cobrem unidades, proporções, refeições, frequência, direção das diferenças, preparo, tempo, vazio/zero, migração, gramática, persistência e relatórios.
 
 Não há avaliação nutricional, recomendações de alimentos, receitas, preços externos ou monetização do tempo. Esta versão compara a mesma frequência nos dois cenários; não implementa rotina híbrida. Dados financeiros não são enviados à rede.
+## Veículo próprio ou aplicativo?
+
+A rota `/veiculo-proprio-ou-aplicativo/` compara carro ou moto (já possuído, financiado ou alugado/por assinatura) com aplicativo de carro, moto ou ambos. A matemática fica em `src/lib/calculations/vehicle-comparison.ts`, separada da interface. Valores monetários são centavos inteiros; proporções e arredondamentos monetários usam BigInt, com metade para cima.
+
+O modelo registra escolhas, periodicidades e valores numéricos `number | null`: vazio é não informado, zero explícito é preservado. Financiamento/aluguel, combustível no modo escolhido e frequência/tarifa do aplicativo são necessários. Os demais custos e a espera são opcionais. Os modos preservam valores editados, mas somente o modo ativo entra no cálculo. Seguro e manutenção aceitam mensal ou anual; IPVA/licenciamento são anuais. Em aluguel, informe separadamente apenas custos que não estejam incluídos no contrato.
+
+- Mensal equivalente de custo anual: anual ÷ 12, arredondado ao centavo. Total anual preserva os anuais originais e soma mensais × 12; pode diferir alguns centavos de mensal × 12.
+- Combustível estimado: km/mês ÷ km/L × preço/L; consumo deve ser maior que zero. O outro modo usa diretamente o gasto mensal informado.
+- Aplicativo: corridas/semana × tarifa × 52/12 por mês, ou × 52 por ano, sem arredondar o semanal antes de calcular os outros períodos.
+- Espera: corridas/semana × minutos/corrida ÷ 60, com 52/12 e 52 para mês/ano. Espera ausente é mostrada como não informada e nunca monetizada.
+
+Salvamento opcional em `quantocusta:vehicle-comparison:v1`, com validação e limpeza isolada. PDF/Excel são carregados sob demanda e gerados no dispositivo; a planilha mantém números editáveis, sem recálculo automático. Os relatórios preservam periodicidades, entradas originais, estimativa de combustível e espera separada do dinheiro. A ferramenta usa os estilos atuais, metadata, canonical e sitemap; continua compatível com static export, sem backend ou novas dependências.
+
+`tests/vehicle-comparison.test.ts` cobre 78 casos de cálculos, carro/moto, aquisição, custos opcionais, combustível, validação, persistência e relatórios reais. Fora da V1: depreciação, preço de compra/revenda, custo de oportunidade, simulação de financiamento, break-even, mapas, preços externos e recomendações de compra/venda.
+
+## Comparar hospedagens
+
+A rota `/comparar-hospedagens/` compara duas reservas diante da mesma viagem. O modelo e a matemática ficam em `src/lib/calculations/lodging-comparison.ts`, a interface em `src/components/calculators/lodging-comparison.tsx`, a persistência em `src/lib/lodging-storage.ts` e os relatórios em `src/lib/export/lodging-comparison.ts`. Não adiciona dependências, backend, APIs, mapas ou preços automáticos.
+
+O modelo registra pessoas, noites, duas hospedagens (preço total/diária, taxas, refeições e estacionamento), transporte compartilhado, locais com dois conjuntos de estimativas e outros custos com valores A/B. Campos numéricos usam `number | null`: vazio não é zero. Nomes são opcionais; até 50 locais e 50 custos adicionais podem ser registrados. Pessoas, noites, dias e visitas são inteiros; distâncias, consumo e minutos aceitam até seis casas decimais. Dias de refeição e estacionamento são limitados a noites + 1, sem preenchimento automático.
+
+- Reserva = preço total ou diária × noites. Refeição = valor/pessoa/dia × pessoas × dias; refeições incluídas não geram adicional.
+- Estacionamento da hospedagem = total ou valor/dia × dias, somente com carro próprio/alugado e quando não incluído.
+- Distância e tempo = valor por trecho × visitas × 2 (ida e volta) ou × 1 (somente ida/volta). Combustível = distância total ÷ km/L × preço/L, arredondado por local ao centavo com BigInt, metade para cima, sem arredondar litros.
+- Aplicativo/manual, estacionamento do destino e pedágio = valor da visita completa × visitas. Não multiplicam por pessoas nem novamente por trechos. Estacionamento pode ter o mesmo valor para A/B ou valores próprios.
+- Total comparável = reserva + taxas + refeições + estacionamento da hospedagem + deslocamentos + outros. Diferença financeira = A − B; por pessoa = total ÷ pessoas, arredondado ao centavo.
+
+Tempo fica separado do dinheiro. Se faltar tempo em qualquer local, o total daquele cenário e a diferença não são apresentados como completos. Sem locais, deslocamentos e tempo são zero. Campos ocultos conservam valores válidos para quando forem reativados, mas não participam da matemática.
+
+Salvar é explícito, na chave independente `quantocusta:lodging-comparison:v1`, com versão e validação do modelo. Limpar só remove esta simulação. PDF A4 paginado e Excel com Resumo, Hospedagens, Deslocamentos e Premissas são gerados localmente e carregados sob demanda. Excel mantém valores monetários numéricos, sem recálculo automático; a fonte padrão do PDF substitui caracteres não suportados por `?`. Metadata, canonical, sitemap e card da Home apontam para a nova rota, compatível com static export.
+
+`tests/lodging-comparison.test.ts` cobre 116 casos de preços, refeições, estacionamentos, modos e tipos de deslocamento, locais compartilhados, combustível, tempo, diferenças, precisão, validação, persistência e geração real dos relatórios. No cenário de 2 pessoas/4 noites, sem custo adicional informado de estacionamento da hospedagem, Hotel Centro totaliza R$ 2.044,80 e Hotel Econômico R$ 1.868,80: diferença R$ 176,00, com 40 e 120 minutos de deslocamento respectivamente. A ferramenta compara somente os custos informados associados à hospedagem e não recomenda uma opção.

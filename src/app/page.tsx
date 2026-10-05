@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
-import { tools } from "@/lib/tools";
+import { tools, travelTools } from "@/lib/tools";
 import { defaultOpenGraph, siteConfig } from "@/lib/site-config";
 
-export const metadata: Metadata = { alternates: { canonical: "/" }, openGraph: { ...defaultOpenGraph, url: "/" } };
+const title = "QuantoCusta | Entenda o custo real das suas escolhas";
+const description = "Use ferramentas gratuitas para comparar custos de moradia, alimentação e mobilidade. Conheça também a área de planejamento de viagens, com ferramentas em breve.";
+export const metadata: Metadata = {
+  title: { absolute: title }, description,
+  alternates: { canonical: "/" },
+  openGraph: { ...defaultOpenGraph, title, description, url: "/" },
+  twitter: { card: "summary_large_image", title, description, images: ["/og-image.png"] },
+};
 
 export default function Home() {
   return (
@@ -11,9 +18,14 @@ export default function Home() {
         <div className="hero-copy">
           <p className="eyebrow"><span className="status-dot" aria-hidden="true" /> Sua próxima fase começa com um plano</p>
           <h1 id="hero-title">Quanto custa a vida que <span>você quer?</span></h1>
-          <p className="hero-description">Morar sozinho, encontrar seu canto, dar o próximo passo. O QuantoCusta ajuda você a planejar gastos, moradia e independência financeira usando calculadoras simples.</p>
+          <p className="hero-description">Planeje escolhas importantes da sua vida e das suas viagens com ferramentas simples que ajudam você a enxergar o custo real de cada decisão.</p>
           <a href="/calculadora-custo-de-vida/" className="button">Calcular meu custo de vida <span aria-hidden="true">↗</span></a>
-          <p className="hero-note">Planeje seu custo de vida, compare imóveis ou descubra quanto custa preparar suas refeições e comprar fora.</p>
+          <p className="hero-note">Preço não é necessariamente custo. Compare suas escolhas com os seus números.</p>
+          <nav className="planning-shortcuts" aria-label="O que você quer planejar?">
+            <p>O que você quer planejar?</p>
+            <a href="#vida"><strong>Planejar minha vida <span aria-hidden="true">→</span></strong><span>Moradia, alimentação, mobilidade e organização financeira.</span></a>
+            <a href="#viagens"><strong>Planejar uma viagem <span aria-hidden="true">→</span></strong><span>Hospedagem, transporte e voos.</span></a>
+          </nav>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="art-sun" />
@@ -25,19 +37,20 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="ferramentas" className="tools-section" aria-labelledby="tools-title">
+      <section id="vida" className="tools-section life-section" aria-labelledby="tools-title">
         <div className="container">
-          <div className="section-heading"><div><p className="eyebrow">Do primeiro plano à casa nova</p><h2 id="tools-title">Menos dúvidas.<br />Mais clareza nas contas.</h2></div><p>Ferramentas para transformar perguntas grandes em próximos passos possíveis.</p></div>
+          <div className="section-heading"><div><p className="eyebrow">Planeje sua vida</p><h2 id="tools-title">Menos dúvidas.<br />Mais clareza nas contas.</h2></div><p>Ferramentas para transformar perguntas grandes em próximos passos possíveis.</p></div>
           <div className="tools-grid">
-            {tools.map((tool) => (
-              <article className="tool-card" key={tool.number}>
-                <div className="card-top"><span className="tool-number" aria-hidden="true">{tool.number}</span><span className="badge">{"href" in tool ? "Disponível" : "Em breve"}</span></div>
-                <p className="tool-tag">{tool.tag}</p>
-                <h3>{tool.title}</h3>
-                <p className="tool-description">{tool.description}</p>
-                {"href" in tool && <a className="text-link" href={tool.href}>Abrir ferramenta →</a>}
-              </article>
-            ))}
+            {tools.map(tool => <ToolCard key={tool.number} tool={tool} />)}
+          </div>
+        </div>
+      </section>
+
+      <section id="viagens" className="tools-section travel-section" aria-labelledby="travel-title">
+        <div className="container">
+          <div className="section-heading"><div><p className="eyebrow">Planeje suas viagens</p><h2 id="travel-title">Viaje com mais clareza nas contas.</h2></div><p>Compare o custo real das escolhas da sua viagem e descubra quando a opção mais barata pode não ser a mais econômica.</p></div>
+          <div className="tools-grid">
+            {travelTools.map(tool => <ToolCard key={tool.number} tool={tool} />)}
           </div>
         </div>
       </section>
@@ -50,7 +63,17 @@ export default function Home() {
           <div><span aria-hidden="true">03</span><div><h3>Privacidade desde o começo</h3><p>O planejamento é feito no navegador, sem cadastro e sem envio dos valores financeiros para servidores.</p></div></div>
         </div>
       </section>
-      <section className="container closing" aria-label="Mensagem do QuantoCusta"><p>O próximo capítulo da sua vida<br />começa com <strong>um pouco mais de clareza.</strong></p><span>{siteConfig.name}</span></section>
+      <section className="container closing" aria-label="Mensagem do QuantoCusta"><p>Sua próxima escolha <br />começa com <strong>um pouco mais de clareza.</strong></p><span>{siteConfig.name}</span></section>
     </>
   );
+}
+
+function ToolCard({ tool }: { tool: { number: string; title: string; tag: string; description: string; href?: string } }) {
+  return <article className="tool-card">
+    <div className="card-top"><span className="tool-number" aria-hidden="true">{tool.number}</span><span className="badge">{tool.href ? "Disponível" : "Em breve"}</span></div>
+    <p className="tool-tag">{tool.tag}</p>
+    <h3>{tool.title}</h3>
+    <p className="tool-description">{tool.description}</p>
+    {tool.href && <a className="text-link" href={tool.href} aria-label={`Abrir ferramenta: ${tool.title}`}>Abrir ferramenta →</a>}
+  </article>;
 }
