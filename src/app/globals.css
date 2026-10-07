@@ -252,3 +252,35 @@ select:focus-visible { outline: 3px solid #8a4a1d; outline-offset: 4px; }
 .lodging-remove { border: 0; background: transparent; color: var(--green); text-decoration: underline; }
 .lodging-results .distribution-label { flex-wrap: wrap; gap: 8px; }
 .lodging-results .comparison-detail > p { margin-top: 16px; }
+
+.lodging-place-wrap { min-width: 0; margin-bottom: 12px; }
+.lodging-place-wrap .expense-section { margin-bottom: 0; }
+.lodging-place-summary { padding: 16px 18px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; overflow-wrap: anywhere; }
+.lodging-place-summary > div + div { margin-top: 12px; }
+.lodging-place-summary p { font-size: 14px; color: var(--muted); }
+.lodging-place summary { scroll-margin-top: 24px; }
+
+.lodging-place > summary .section-chevron { transform: none; }
+.lodging-place[open] > summary .section-chevron { transform: rotate(45deg); }
+
+.rental-calculator .section-body, .rental-calculator summary { min-width: 0; overflow-wrap: anywhere; }
+.rental-calculator .money-control > span { flex-shrink: 0; white-space: nowrap; }
+.rental-calculator h4 { font-size: 16px; font-weight: 650; line-height: 1.6; margin-block: 12px; }
+.rental-calculator .included-group { margin-top: 24px; }
+.rental-tip { padding: 16px; border-radius: 10px; background: #eef0df; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+.rental-tip h4 { margin-top: 0; }
+.rental-remove { border: 0; background: transparent; color: var(--green); text-decoration: underline; min-height: 44px; }
+.rental-ride { scroll-margin-top: 24px; }
+.rental-ride > summary { display: block; }
+.rental-ride-heading { display: flex; align-items: center; gap: 12px; }
+.rental-ride-heading h4 { flex: 1; min-width: 0; margin: 0; }
+.rental-ride-heading > span:not(.section-chevron) { font-size: 14px; }
+.rental-calculator .rental-ride > summary { border-bottom: 0; }
+.rental-calculator .rental-ride[open] > summary { border-bottom: 1px solid var(--line); }
+.rental-calculator .rental-ride > summary .section-chevron { transform: none; flex-shrink: 0; }
+.rental-calculator .rental-ride[open] > summary .section-chevron { transform: rotate(45deg); }
+.rental-ride-summary { font-size: 14px; line-height: 1.8; margin-top: 12px; color: var(--muted); }
+.rental-results .comparison-detail > p { margin-top: 12px; }
+.rental-results .scenario-card { min-width: 0; }
+.rental-deposit { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 20px; }
+.rental-distribution { padding: 0; margin: 0; list-style: none; display: grid; gap: 20px; }

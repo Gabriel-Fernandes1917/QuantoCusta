@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
-import { formatTravelTime, lodgingDifferenceText, lodgingNotes, lodgingPriceInsight, lodgingTimeText, mealLabels, transportLabels, tripLabels, usesVehicle, type LodgingResult } from "../calculations/lodging-comparison";
+import { formatLodgingQuantity, formatTravelTime, lodgingDifferenceText, lodgingNotes, lodgingPriceInsight, lodgingTimeText, mealLabels, transportLabels, tripLabels, usesVehicle, type LodgingResult } from "../calculations/lodging-comparison";
 import { formatMoney } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
 
@@ -10,7 +10,7 @@ const number = (value: number | null): Cell | null => value === null ? null : { 
 const wrapped = (value: string): Cell => ({ value, wrap: true, height: 64 });
 export function lodgingSheets(r: LodgingResult, options: ReportOptions): Sheet<Blob>[] {
   const v = r.input, [a, b] = r.scenarios, vehicle = usesVehicle(v.transport);
-  const summary: Row[] = [[header("Comparar hospedagens"), header(a.name), header(b.name)], ["Data da simulação", reportDate(options.generatedAt)], ["Pessoas", number(v.people)], ["Noites", number(v.nights)], ["Transporte", transportLabels[v.transport!]], ["Preço da hospedagem", money(a.price), money(b.price)], ["Custos adicionais", money(a.additional), money(b.additional)], ["Custo total comparável", money(a.total), money(b.total)], ["Custo comparável por pessoa", money(a.perPerson), money(b.perPerson)], ["Diferença financeira (A - B)", money(r.delta)], ["Tempo total / minutos", number(a.minutes), number(b.minutes)], ["Diferença de tempo / minutos (A - B)", number(r.minutesDelta)], ["Comparação", wrapped(lodgingDifferenceText(r))], ["Reserva × total", wrapped(lodgingPriceInsight(r))], ["Comparação de tempo", wrapped(lodgingTimeText(r))], ["Custo por pessoa", wrapped("Divisão simples do total pelo número de pessoas informado.")]];
+  const summary: Row[] = [[header("Comparar hospedagens"), header(a.name), header(b.name)], ["Data da simulação", reportDate(options.generatedAt)], ["Pessoas", number(v.people)], ["Noites", number(v.nights)], ["Transporte", transportLabels[v.transport!]], ["Preço da hospedagem", money(a.price), money(b.price)], ["Custos adicionais", money(a.additional), money(b.additional)], ["Custo total comparável", money(a.total), money(b.total)], ["Custo comparável por pessoa", money(a.perPerson), money(b.perPerson)], ["Diferença financeira (A - B)", money(r.delta)], ["Tempo total / minutos", number(a.minutes), number(b.minutes)], ["Diferença de tempo / minutos (A - B)", number(r.minutesDelta)], ["Comparação", wrapped(lodgingDifferenceText(r))], ["Diferença no preço das hospedagens", money(Math.abs(r.priceDelta))], ["Diferença nos custos adicionais (A - B)", money(a.additional - b.additional)], ["Diferença final absoluta", money(Math.abs(r.delta))], ["Comparação de tempo", wrapped(lodgingTimeText(r))], ["Custo por pessoa", wrapped("Divisão simples do total pelo número de pessoas informado.")]];
   const lodging: Row[] = [[header("Item"), header(a.name), header(b.name)]];
   const addMoney = (label: string, values: (number | null)[]) => lodging.push([label, ...values.map(money)]);
   const addNumbers = (label: string, values: (number | null)[]) => lodging.push([label, ...values.map(number)]);
@@ -58,35 +58,35 @@ export async function createLodgingPdf(result: LodgingResult, options: ReportOpt
   }
   const v = result.input, decimal = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 6 });
   text(`${options.brand.name} | Simulação: ${reportDate(options.generatedAt)} (horário de Brasília)`);
-  text(`${v.people} pessoas | ${v.nights} noites | ${transportLabels[v.transport!]}`);
+  text(`${formatLodgingQuantity(v.people!, "pessoa")} | ${formatLodgingQuantity(v.nights!, "noite")} | ${transportLabels[v.transport!]}`);
   text("Resumo financeiro", true);
   result.scenarios.forEach(s => text(`${s.name}: reserva ${formatMoney(s.price)}; adicionais ${formatMoney(s.additional)}; custo total comparável ${formatMoney(s.total)}; por pessoa ${formatMoney(s.perPerson)}.`));
-  text(lodgingDifferenceText(result)); text(`Diferença: ${formatMoney(Math.abs(result.delta))}.`); text(lodgingPriceInsight(result));
+  text(lodgingDifferenceText(result)); text(`Diferença: ${formatMoney(Math.abs(result.delta))}.`); text("Impacto dos custos adicionais", true); text(lodgingPriceInsight(result));
   result.scenarios.forEach((s, i) => {
     const l = v.lodgings[i]; text(s.name, true);
-    text(`Preço informado: ${formatMoney(l.price!)} (${l.priceMode === "night" ? `diária × ${v.nights} noites` : "total da estadia"}). Total da hospedagem: ${formatMoney(s.price)}.`);
+    text(`Preço informado: ${formatMoney(l.price!)} (${l.priceMode === "night" ? `diária × ${formatLodgingQuantity(v.nights!, "noite")}` : "total da estadia"}). Total da hospedagem: ${formatMoney(s.price)}.`);
     s.breakdown.slice(1).forEach(b => text(`${b.label}: ${formatMoney(b.value)}.`));
-    Object.entries(mealLabels).forEach(([key, label], j) => { const m = l.meals[key as keyof typeof mealLabels]; text(`${label}: ${m.included ? "incluído" : m.price === null ? "nenhum custo adicional informado" : `${formatMoney(m.price)}/pessoa/dia × ${v.people} pessoas × ${m.days} dias = ${formatMoney(s.meals[j].total)}`}.`); });
-    text(`Estacionamento incluído: ${l.parking.included ? "sim" : "não"}. ${!usesVehicle(v.transport) ? "Sem veículo: não aplicável." : l.parking.included || l.parking.price === null ? "Nenhum custo adicional." : `Informado ${formatMoney(l.parking.price)} ${l.parking.period === "day" ? `por dia × ${l.parking.days} dias` : "no total da estadia"}; total ${formatMoney(s.parking)}.`}`);
+    Object.entries(mealLabels).forEach(([key, label], j) => { const m = l.meals[key as keyof typeof mealLabels]; text(`${label}: ${m.included ? "incluído" : m.price === null ? "nenhum custo adicional informado" : `${formatMoney(m.price)}/pessoa/dia × ${formatLodgingQuantity(v.people!, "pessoa")} × ${formatLodgingQuantity(m.days!, "dia")} = ${formatMoney(s.meals[j].total)}`}.`); });
+    text(`Estacionamento incluído: ${l.parking.included ? "sim" : "não"}. ${!usesVehicle(v.transport) ? "Sem veículo: não aplicável." : l.parking.included || l.parking.price === null ? "Nenhum custo adicional." : `Informado ${formatMoney(l.parking.price)} ${l.parking.period === "day" ? `por dia × ${formatLodgingQuantity(l.parking.days!, "dia")}` : "no total da estadia"}; total ${formatMoney(s.parking)}.`}`);
     s.extras.forEach(e => text(`${e.name}: ${formatMoney(e.total)} no total da viagem.`));
   });
   text("Deslocamentos por local", true);
   if (usesVehicle(v.transport) && v.places.length) text(`Consumo: ${decimal(v.efficiency!)} km/L. Combustível: ${formatMoney(v.fuelPrice!)}/L.`);
   if (!v.places.length) text("Nenhum local cadastrado.");
   v.places.forEach((p, i) => {
-    text(`${p.name.trim() || `Local ${i + 1}`} | ${p.visits} visita(s) | ${tripLabels[p.kind]}`, true);
+    text(`${p.name.trim() || `Local ${i + 1}`} | ${formatLodgingQuantity(p.visits!, "visita")} | ${tripLabels[p.kind]}`, true);
     result.scenarios.forEach((s, index) => {
       const j = s.journeys[i], informed = p.journeys[index];
       text(`${s.name}: ${j.distance === null ? `${v.transport === "app" ? "corridas" : "custo manual"} ${formatMoney(informed.fare!)}/visita; total ${formatMoney(j.fare)}` : `${decimal(informed.distance!)} km/trecho; ${decimal(j.distance)} km totais; combustível ${formatMoney(j.fuel)}; estacionamento no destino ${formatMoney(j.parking)}; pedágio ${formatMoney(j.toll)}`}. Custo de deslocamentos: ${formatMoney(j.total)}.`);
-      text(`Tempo: ${j.minutes === null ? "não informado" : `${decimal(informed.minutes!)} min/trecho; ${decimal(j.minutes)} min totais (aproximadamente ${formatTravelTime(j.minutes)})`}.`);
+      text(`Tempo: ${j.minutes === null ? "não informado" : `${decimal(informed.minutes!)} min/trecho; ${decimal(j.minutes)} min totais (${formatTravelTime(j.minutes)})`}.`);
     });
   });
   text("Tempo total de deslocamento", true);
-  result.scenarios.forEach(s => text(`${s.name}: ${s.minutes === null ? "incompleto: faltam tempos de locais" : `${decimal(s.minutes)} minutos (aproximadamente ${formatTravelTime(s.minutes)})`}.`)); text(lodgingTimeText(result));
-  if (result.minutesDelta !== null) text(`Diferença de tempo: ${decimal(Math.abs(result.minutesDelta))} minutos (aproximadamente ${formatTravelTime(Math.abs(result.minutesDelta))}).`);
+  result.scenarios.forEach(s => text(`${s.name}: ${s.minutes === null ? "incompleto: faltam tempos de locais" : `${formatLodgingQuantity(s.minutes, "minuto")} (${formatTravelTime(s.minutes)})`}.`)); text(lodgingTimeText(result));
+  if (result.minutesDelta !== null) text(`Diferença de tempo: ${formatTravelTime(Math.abs(result.minutesDelta))}.`);
   text("Tempo separado do dinheiro, sem valor monetário.");
   text("Por que os custos são diferentes?", true); if (!result.differences.length) text("Os custos informados são iguais em todas as categorias.");
-  result.differences.forEach(d => text(`${d.label}: ${result.scenarios[0].name} ${formatMoney(d.a)}; ${result.scenarios[1].name} ${formatMoney(d.b)}; diferença (A - B) ${formatMoney(d.delta)}.`));
+  result.differences.forEach(d => text(`${d.label}: ${result.scenarios[0].name} ${formatMoney(d.a)}; ${result.scenarios[1].name} ${formatMoney(d.b)}; ${result.scenarios[d.delta < 0 ? 0 : 1].name} custa ${formatMoney(Math.abs(d.delta))} a menos nesta categoria.`));
   text("Premissas e limites", true); lodgingNotes.forEach(note => text(note));
   doc.getPages().forEach((p, i, pages) => { p.drawText(safe(reportFooter(options.brand)).slice(0, 85), { x: 44, y: 35, font, size: 8, color: green }); p.drawText(`${i + 1}/${pages.length}`, { x: 520, y: 35, font, size: 8, color: green }); });
   return doc.save();

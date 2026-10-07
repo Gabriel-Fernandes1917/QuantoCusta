@@ -7,6 +7,6 @@ export const tools = [
 
 export const travelTools = [
   { number: "01", title: "Comparar hospedagens", description: "Compare hospedagem, café da manhã, estacionamento, deslocamentos e outros custos para entender qual opção realmente custa menos.", tag: "Preço da estadia não é custo total", href: "/comparar-hospedagens/" },
-  { number: "02", title: "Veículo alugado ou aplicativo?", description: "Compare aluguel, combustível, estacionamento e pedágios com o custo do transporte por aplicativo durante a viagem.", tag: "Sua mobilidade durante a viagem" },
+  { number: "02", title: "Veículo alugado ou aplicativo?", description: "Compare aluguel, combustível, estacionamento e pedágios com o custo do transporte por aplicativo durante a viagem.", tag: "Sua mobilidade durante a viagem", href: "/veiculo-alugado-ou-aplicativo/" },
   { number: "03", title: "Comparar voos", description: "Compare passagem, bagagem, alimentação, deslocamentos adicionais e tempo total para entender o custo real de cada opção.", tag: "Passagem mais barata nem sempre custa menos" },
 ] as const;

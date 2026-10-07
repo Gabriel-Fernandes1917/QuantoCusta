@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { PDFDocument, PDFPage } from "pdf-lib";
-import { calculateLodgingComparison, emptyLodgingComparison, emptyTravelPlace, formatTravelTime, lodgingDifference, lodgingDifferenceText, lodgingFields, lodgingIssues, lodgingName, lodgingParking, lodgingPerPerson, lodgingPrice, lodgingPriceInsight, lodgingTimeText, mealCost, parseLodgingQuantity, perVisitCost, storedLodgingFields, sumLodgingCosts, timeDifference, totalDistance, travelFuel, travelMinutes, validateLodgingShape, type LodgingComparison } from "../src/lib/calculations/lodging-comparison";
+import { calculateLodgingComparison, emptyLodgingComparison, emptyTravelPlace, formatLodgingQuantity, formatTravelTime, lodgingDifference, lodgingDifferenceText, lodgingFields, lodgingIssues, lodgingName, lodgingParking, lodgingPerPerson, lodgingPrice, lodgingPriceInsight, lodgingTimeText, mealCost, parseLodgingQuantity, perVisitCost, storedLodgingFields, sumLodgingCosts, timeDifference, totalDistance, travelFuel, travelMinutes, validateLodgingShape, type LodgingComparison } from "../src/lib/calculations/lodging-comparison";
 import { decodeLodgingComparison, encodeLodgingComparison } from "../src/lib/lodging-storage";
 import { createLodgingExcel, createLodgingPdf, lodgingSheets } from "../src/lib/export/lodging-comparison";
 import { travelTools } from "../src/lib/tools";
@@ -80,7 +80,7 @@ describe("aplicativo e outro/manual", () => {
 });
 describe("tempo separado do dinheiro", () => {
   it.each([["round", 120], ["outward", 60], ["return", 60]] as const)("tempo %s", (kind, minutes) => expect(travelMinutes(20, 3, kind)).toBe(minutes));
-  it.each([[0, "0 horas"], [60, "1 hora"], [90, "1,5 horas"], [120, "2 horas"]])("%s minutos para horas", (minutes, text) => expect(formatTravelTime(minutes as number)).toBe(text));
+  it.each([[0, "0 minutos"], [1, "1 minuto"], [12, "12 minutos"], [59, "59 minutos"], [60, "1 hora"], [61, "1h01"], [72, "1h12"], [90, "1h30"], [120, "2 horas"], [132, "2h12"]])("%s minutos para horas", (minutes, text) => expect(formatTravelTime(minutes as number)).toBe(text));
   it("tempo zero é explícito e ausência torna total incompleto", () => { const v = scenario(); v.places[0].journeys[0].minutes = null; let r = calculateLodgingComparison(v); expect(r.scenarios[0].minutes).toBeNull(); expect(r.minutesDelta).toBeNull(); expect(lodgingTimeText(r)).toContain("Informe os tempos"); v.places[0].journeys[0].minutes = 0; r = calculateLodgingComparison(v); expect(r.scenarios[0].minutes).toBe(0); });
   it("não monetiza tempo", () => { const v = scenario(), before = calculateLodgingComparison(v); v.places[0].journeys[0].minutes = 999; const after = calculateLodgingComparison(v); expect(after.delta).toBe(before.delta); expect(after.scenarios.map(s => s.total)).toEqual(before.scenarios.map(s => s.total)); expect(after.minutesDelta).not.toBe(before.minutesDelta); });
   it("frase usa nome e diferença de tempo", () => { const r = calculateLodgingComparison(scenario()); expect(lodgingTimeText(r)).toContain("Hotel Centro"); expect(timeDifference(40, 120)).toBe(-80); });
@@ -91,7 +91,7 @@ describe("diferenças, inversão da reserva e por pessoa", () => {
   it("protege divisão por zero", () => expect(() => lodgingPerPerson(1000, 0)).toThrow());
   it.each([[100000, "Hotel Centro"], [300000, "Hotel Econômico"]])("cenário de menor custo %s", (price, less) => { const v = scenario(); v.lodgings[0].price = price as number; expect(lodgingDifferenceText(calculateLodgingComparison(v))).toContain(`${less} custa`); });
   it("empate", () => { const v = scenario(); v.places = []; v.lodgings.forEach(l => { l.price = 100000; l.meals.breakfast.included = true; }); const r = calculateLodgingComparison(v); expect(lodgingDifferenceText(r)).toContain("mesmo custo total comparável"); expect(lodgingTimeText(r)).toContain("mesmo tempo"); });
-  it("reserva mais barata continua mais barata", () => expect(lodgingPriceInsight(calculateLodgingComparison(scenario()))).toContain("Hotel Econômico possui o menor preço"));
+  it("reserva mais barata continua mais barata", () => expect(lodgingPriceInsight(calculateLodgingComparison(scenario()))).toContain("diferença final cai para R$ 176,00"));
   it("adicionais podem inverter a opção mais barata", () => { const v = scenario(); v.lodgings[1].fees = 50000; const r = calculateLodgingComparison(v); expect(lodgingPriceInsight(r)).toContain("Hotel Econômico custa R$ 400,00 a menos na hospedagem"); expect(lodgingPriceInsight(r)).toContain("Hotel Centro custa R$ 324,00 a menos no total"); });
   it("gastos iguais não criam linhas de diferenças irrelevantes", () => { const r = calculateLodgingComparison(scenario()); expect(r.differences.some(d => d.label === "Estacionamento nos locais")).toBe(false); expect(r.differences.some(d => d.label === "Almoço")).toBe(false); });
 });
@@ -109,7 +109,7 @@ describe("validação e persistência", () => {
   it.each(["invalid", '{"version":2}', '{"version":1,"values":{}}', '{"version":1,"values":null}'])("registro inválido %s", text => expect(() => decodeLodgingComparison(text)).toThrow());
   it("locais duplicados, enum inválido ou formato quebrado são rejeitados", () => { const v = scenario(); v.places.push(structuredClone(v.places[0])); expect(() => validateLodgingShape(v)).toThrow(); v.places.pop(); (v.places[0] as unknown as { kind: string }).kind = "invalid"; expect(() => validateLodgingShape(v)).toThrow(); });
   it("lista ativa exclui gastos incluídos e lista armazenada conserva dados", () => { const v = scenario(); expect(lodgingFields(v).some(f => f.path === "lodgings.0.meals.breakfast.price")).toBe(false); expect(storedLodgingFields(v).some(f => f.path === "lodgings.0.meals.breakfast.price")).toBe(true); });
-  it("ativação do card preserva os outros dois em breve", () => { expect(travelTools[0]).toMatchObject({ title: "Comparar hospedagens", href: "/comparar-hospedagens/" }); expect(travelTools.slice(1).every(t => !("href" in t))).toBe(true); });
+  it("hospedagens continuam disponíveis e voos em breve", () => { expect(travelTools[0]).toMatchObject({ title: "Comparar hospedagens", href: "/comparar-hospedagens/" }); expect(travelTools[2]).not.toHaveProperty("href"); });
 });
 describe("relatórios", () => {
   it.each(["own", "rented", "app", "manual"] as const)("PDF e Excel para %s recebem totais e detalhamento corretos", async transport => {
@@ -131,4 +131,43 @@ describe("relatórios", () => {
   });
   it("Excel preserva ausência de tempo e números explícitos zero", () => { const v = scenario(); v.places[0].journeys[0].minutes = null; v.lodgings[0].fees = 0; const sheets = lodgingSheets(calculateLodgingComparison(v), options); expect(sheets[0].data.find(row => row[0] === "Tempo total / minutos")?.[1]).toBeNull(); expect(sheets[2].data[1][18]).toBeNull(); expect(sheets[1].data.find(row => row[0] === "Taxas")?.[1]).toMatchObject({ value: 0, type: Number }); });
   it("PDF quebra nomes longos sem perder os totais", async () => { const v = scenario(); v.lodgings[0].name = "H".repeat(80); const bytes = await createLodgingPdf(calculateLodgingComparison(v), options); expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(0); });
+});
+
+describe("acabamento da V1", () => {
+  it.each([[0, "pessoa", "0 pessoas"], [1, "pessoa", "1 pessoa"], [2, "pessoa", "2 pessoas"], [1, "noite", "1 noite"], [2, "noite", "2 noites"], [1, "visita", "1 visita"], [2, "visita", "2 visitas"]] as const)("pluraliza %s %s", (n, word, expected) => expect(formatLodgingQuantity(n, word)).toBe(expected));
+  it.each([
+    [150000, 180000, 0, 0, "custos adicionais são iguais"],
+    [150000, 180000, 8000, 0, "diferença final cai para R$ 220,00"],
+    [150000, 180000, 70000, 20000, "Hospedagem B custa R$ 200,00 a menos no total comparável"],
+    [150000, 180000, 0, 10000, "diferença total chega a R$ 400,00"],
+    [150000, 150000, 0, 10000, "Hospedagem A custa R$ 100,00 a menos"],
+    [150000, 180000, 30000, 0, "mesmo custo total comparável"],
+    [150000, 150000, 0, 0, "mesmo custo total comparável"],
+    [180000, 150000, 0, 8000, "diferença final cai para R$ 220,00"],
+  ])("interpreta preços %s/%s e adicionais %s/%s", (a, b, x, y, expected) => {
+    const v = emptyLodgingComparison(); Object.assign(v, { people: 1, nights: 1, transport: "manual" });
+    Object.assign(v.lodgings[0], { price: a, fees: x }); Object.assign(v.lodgings[1], { price: b, fees: y });
+    expect(lodgingPriceInsight(calculateLodgingComparison(v))).toContain(expected);
+  });
+  it("preserva o cenário real, exportações e armazenamento", async () => {
+    const v = emptyLodgingComparison(); Object.assign(v, { people: 1, nights: 10, transport: "rented", efficiency: 10, fuelPrice: 700 });
+    Object.assign(v.lodgings[0], { name: "Condomínio Vivare Matteo Gianella", price: 175000 });
+    Object.assign(v.lodgings[1], { name: "Residencial Paseo Del Molino", price: 193900 });
+    v.places = [["Jardim Zobotanico", 7, 15, 7, 15], ["Nova Petropolis", 38, 51, 34, 45]].map(([name, da, ma, db, mb], i) => {
+      const p = emptyTravelPlace(String(i)); p.name = String(name); p.visits = 1;
+      Object.assign(p.journeys[0], { distance: da, minutes: ma }); Object.assign(p.journeys[1], { distance: db, minutes: mb }); return p;
+    });
+    const r = calculateLodgingComparison(decodeLodgingComparison(encodeLodgingComparison(v)));
+    expect(r.scenarios.map(s => s.journeys.map(j => [j.distance, j.fuel, j.minutes]))).toEqual([[[14, 980, 30], [76, 5320, 102]], [[14, 980, 30], [68, 4760, 90]]]);
+    expect(r.scenarios.map(s => [s.transport, s.minutes, s.total, s.perPerson])).toEqual([[6300, 132, 181300, 181300], [5740, 120, 199640, 199640]]);
+    expect(r.delta).toBe(-18340); expect(r.minutesDelta).toBe(12);
+    expect(lodgingPriceInsight(r)).toContain("Residencial Paseo Del Molino custa R$ 189,00 a mais"); expect(lodgingPriceInsight(r)).toContain("economiza R$ 5,60"); expect(lodgingPriceInsight(r)).toContain("R$ 183,40");
+    expect(lodgingTimeText(r)).toContain("12 minutos a menos");
+    const sheets = lodgingSheets(r, options);
+    expect(sheets[0].data.find(row => row[0] === "Diferença nos custos adicionais (A - B)")?.[1]).toMatchObject({ type: Number, value: 5.6 });
+    const draw = vi.spyOn(PDFPage.prototype, "drawText");
+    try { await createLodgingPdf(r, options); const text = draw.mock.calls.map(c => c[0]).join(" ");
+      expect(text).toContain("Impacto dos custos adicionais"); expect(text).toContain("1 pessoa"); expect(text).toContain("1 visita"); expect(text).toContain("132 minutos (2h12)"); expect(text).toContain("Diferença de tempo: 12 minutos"); expect(text).not.toMatch(/1 pessoas|visita\(s\)|aproximadamente|A - B/);
+    } finally { draw.mockRestore(); }
+  });
 });

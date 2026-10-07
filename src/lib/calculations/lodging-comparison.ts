@@ -53,7 +53,15 @@ export function travelMinutes(minutes: number, visits: number, kind: TripKind) {
 export function lodgingPerPerson(total: number, people: number) { safe(total); quantity(people, true); if (people <= 0) throw new Error("Informe ao menos uma pessoa."); return roundRatio(BigInt(total), BigInt(people)); }
 export function lodgingDifference(a: number, b: number) { safe(a); safe(b); return a - b; }
 export function timeDifference(a: number, b: number) { if (![a, b].every(n => Number.isFinite(n) && n >= 0)) throw new Error("Tempo inválido."); return a - b; }
-export function formatTravelTime(minutes: number) { const value = (minutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 }); return `${value} ${value === "1" ? "hora" : "horas"}`; }
+export function formatLodgingQuantity(value: number, singular: string, plural = `${singular}s`) {
+  return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 6 })} ${value === 1 ? singular : plural}`;
+}
+export function formatTravelTime(minutes: number) {
+  const hours = Math.floor(minutes / 60), rest = minutes % 60;
+  if (minutes < 60) return formatLodgingQuantity(minutes, "minuto");
+  if (rest === 0) return formatLodgingQuantity(hours, "hora");
+  return `${hours}h${rest.toLocaleString("pt-BR", { minimumIntegerDigits: 2, maximumFractionDigits: 6 })}`;
+}
 
 export type LodgingField = { path: string; kind: "money" | "quantity" | "integer"; required?: boolean; positive?: boolean; max?: number };
 export function storedLodgingFields(v: LodgingComparison): LodgingField[] {
@@ -177,16 +185,20 @@ export function lodgingDifferenceText(r: LodgingResult) {
   return `Considerando os valores informados, ${less.name} custa ${formatMoney(Math.abs(r.delta))} a menos no total da viagem do que ${more.name}.`;
 }
 export function lodgingPriceInsight(r: LodgingResult) {
-  if (r.priceDelta === 0) return "As duas opções têm o mesmo preço de hospedagem. Os custos adicionais informados determinam a diferença no total.";
-  const cheap = r.priceDelta < 0 ? r.scenarios[0] : r.scenarios[1], other = r.priceDelta < 0 ? r.scenarios[1] : r.scenarios[0];
-  if (r.delta === 0) return `${cheap.name} tem o menor preço de hospedagem, mas os custos adicionais informados deixam os totais comparáveis iguais.`;
-  if (Math.sign(r.priceDelta) === Math.sign(r.delta)) return `${cheap.name} possui o menor preço de hospedagem e também o menor custo total considerando os valores informados.`;
-  return `${cheap.name} custa ${formatMoney(Math.abs(r.priceDelta))} a menos na hospedagem, mas considerando os custos adicionais informados, ${other.name} custa ${formatMoney(Math.abs(r.delta))} a menos no total da viagem.`;
+  if (r.delta === 0) return "Considerando o preço das hospedagens e os custos adicionais informados, as duas opções possuem o mesmo custo total comparável.";
+  if (r.priceDelta === 0) return `Os preços das hospedagens são iguais. Considerando os custos adicionais informados, ${r.scenarios[r.delta < 0 ? 0 : 1].name} custa ${formatMoney(Math.abs(r.delta))} a menos no total comparável.`;
+  const [cheap, other] = r.priceDelta < 0 ? r.scenarios : [...r.scenarios].reverse();
+  const initial = formatMoney(Math.abs(r.priceDelta)), final = formatMoney(Math.abs(r.delta));
+  const extra = cheap.additional - other.additional;
+  if (Math.sign(r.priceDelta) !== Math.sign(r.delta)) return `${cheap.name} custa ${initial} a menos na hospedagem, mas gera ${formatMoney(extra)} a mais em custos adicionais informados. Considerando esses gastos, ${other.name} custa ${final} a menos no total comparável.`;
+  if (extra > 0) return `${other.name} custa ${initial} a mais na hospedagem, mas economiza ${formatMoney(extra)} nos custos adicionais informados. Com isso, a diferença final cai para ${final}.`;
+  if (extra < 0) return `${cheap.name} custa ${initial} a menos na reserva e também gera ${formatMoney(-extra)} a menos em custos adicionais informados. A diferença total chega a ${final}.`;
+  return `${cheap.name} possui o menor preço de hospedagem e continua com o menor custo total considerando os valores informados. Os custos adicionais são iguais nas duas opções; a diferença permanece em ${final}.`;
 }
 export function lodgingTimeText(r: LodgingResult) {
   if (r.minutesDelta === null) return "Informe os tempos de todos os locais nas duas hospedagens para comparar o tempo total.";
   if (r.minutesDelta === 0) return "Os dois cenários têm o mesmo tempo de deslocamento informado.";
-  return `Considerando os locais e frequências informados, ${r.scenarios[r.minutesDelta < 0 ? 0 : 1].name} envolve aproximadamente ${formatTravelTime(Math.abs(r.minutesDelta))} a menos de deslocamento durante a viagem.`;
+  return `Considerando os locais e frequências informados, ${r.scenarios[r.minutesDelta < 0 ? 0 : 1].name} envolve ${formatTravelTime(Math.abs(r.minutesDelta))} a menos de deslocamento durante a viagem.`;
 }
 export const lodgingNotes = [
   "Todos os preços, distâncias e tempos são informados pelo usuário. Não buscamos hotéis, preços de combustível ou alimentação, não calculamos rotas e não usamos mapas.",
