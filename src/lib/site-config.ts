@@ -13,8 +13,8 @@ const siteUrl = resolveSiteUrl(process.env.SITE_URL);
 
 export const siteConfig = {
   name: "QuantoCusta",
-  slogan: "Quanto custa a vida que você quer?",
-  description: "Planeje gastos, moradia e independência financeira com calculadoras simples. Conheça o QuantoCusta e prepare seus próximos passos.",
+  slogan: "Descubra o custo real das suas escolhas",
+  description: "Compare moradia, alimentação, transporte e viagens. Descubra custos que passam despercebidos e tome decisões com mais clareza usando ferramentas gratuitas.",
   url: siteUrl,
   reportDomain: process.env.REPORT_DOMAIN ?? (siteUrl.hostname === "localhost" || siteUrl.hostname === "127.0.0.1" ? "" : siteUrl.hostname),
 };
@@ -25,5 +25,5 @@ export const defaultOpenGraph = {
   siteName: siteConfig.name,
   title: siteConfig.slogan,
   description: siteConfig.description,
-  images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "QuantoCusta — Quanto custa a vida que você quer?" }],
+  images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "QuantoCusta" }],
 };

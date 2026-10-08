@@ -109,7 +109,7 @@ describe("validação e persistência", () => {
   it.each(["invalid", '{"version":2}', '{"version":1,"values":{}}', '{"version":1,"values":null}'])("registro inválido %s", text => expect(() => decodeLodgingComparison(text)).toThrow());
   it("locais duplicados, enum inválido ou formato quebrado são rejeitados", () => { const v = scenario(); v.places.push(structuredClone(v.places[0])); expect(() => validateLodgingShape(v)).toThrow(); v.places.pop(); (v.places[0] as unknown as { kind: string }).kind = "invalid"; expect(() => validateLodgingShape(v)).toThrow(); });
   it("lista ativa exclui gastos incluídos e lista armazenada conserva dados", () => { const v = scenario(); expect(lodgingFields(v).some(f => f.path === "lodgings.0.meals.breakfast.price")).toBe(false); expect(storedLodgingFields(v).some(f => f.path === "lodgings.0.meals.breakfast.price")).toBe(true); });
-  it("hospedagens continuam disponíveis e voos em breve", () => { expect(travelTools[0]).toMatchObject({ title: "Comparar hospedagens", href: "/comparar-hospedagens/" }); expect(travelTools[2]).not.toHaveProperty("href"); });
+  it("hospedagens continuam disponíveis sem ferramentas futuras no catálogo", () => { expect(travelTools.find(tool => tool.href === "/comparar-hospedagens/")).toMatchObject({ title: "Comparar hospedagens", href: "/comparar-hospedagens/" }); expect(travelTools).toHaveLength(3); });
 });
 describe("relatórios", () => {
   it.each(["own", "rented", "app", "manual"] as const)("PDF e Excel para %s recebem totais e detalhamento corretos", async transport => {

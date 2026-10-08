@@ -1,8 +1,22 @@
 # QuantoCusta
 
-**Quanto custa a vida que você quer?**
+**Preço não é necessariamente custo.**
 
-Portal brasileiro de planejamento de gastos, moradia e independência financeira. Inclui Home, privacidade, a calculadora de custo de vida em `/calculadora-custo-de-vida/`, o comparador em `/comparar-imoveis/` e a ferramenta de alimentação em `/comer-fora-ou-cozinhar/`. As ferramentas de mudança e reserva continuam **Em breve**.
+Portal brasileiro para comparar custos e planejar escolhas de vida e viagens. Inclui sete ferramentas disponíveis, Home e Privacidade, sem cadastro ou backend.
+
+## Planejamento de viagem
+
+`/custo-da-viagem/` permite planejar uma viagem ou comparar de dois a quatro destinos, com duração, grupo e orçamento independentes. As sete categorias de despesas são recolhíveis; a reserva opcional aparece separadamente. Campos vazios indicam valores não considerados e zero explícito indica um custo informado como zero.
+
+- `src/lib/calculations/trip-cost.ts`: modelo e cálculo puro em centavos inteiros, com BigInt para produtos e arredondamento seguro. Subtotal soma as despesas; reserva percentual usa o subtotal; total soma subtotal e reserva. Custo por pessoa e por dia usa o total planejado.
+- `src/lib/trip-form.ts`: campos de edição, conversão monetária e cenários iniciais sem preços presumidos.
+- `src/components/calculators/trip-cost.tsx`: formulário, alternância de destinos, resultados, barras e comparação por categoria.
+- `src/lib/trip-storage.ts`: validação e serialização versionada sob `quantocusta:trip-cost:v1`, independente das outras ferramentas.
+- `src/lib/export/trip-cost.ts` e `src/components/export-trip.tsx`: PDF paginado e Excel com Resumo, Despesas detalhadas, Comparação de destinos (quando aplicável) e Premissas. São retratos da simulação; editar o Excel não recalcula os totais.
+
+Os testes cobrem conversões por pessoa, noite, dia e quantidade, reservas, diferenças, cenários incompletos, limites seguros, persistência e geração real de PDF/XLSX. Os resultados não avaliam qualidade ou recomendam destinos. Não há preços automáticos nem integração entre ferramentas; a transferência de totais é manual.
+
+O feedback da Home usa links `mailto:` com `target="_blank"` e `rel="noopener noreferrer"`, além da alternativa de copiar o endereço. A abertura depende do navegador e do aplicativo configurado; não há confirmação de envio nem inclusão automática de dados da simulação.
 
 ## Stack
 

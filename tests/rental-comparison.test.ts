@@ -98,7 +98,7 @@ describe("validação e armazenamento", () => {
   it.each(["invalid", '{"version":2}', '{"version":1,"values":{}}', '{"version":1,"values":null}'])("salvo inválido %s", text => expect(() => decodeRentalComparison(text)).toThrow());
   it("ids duplicados e lista acima de 50 são rejeitados", () => { const v = minimal(); v.rides.push(structuredClone(v.rides[0])); expect(() => validateRentalShape(v)).toThrow(); v.rides = Array.from({ length: 51 }, (_, i) => emptyRentalRide(String(i))); expect(() => validateRentalShape(v)).toThrow(); });
   it("checklist quebrado é rejeitado", () => { const v = minimal(); (v as unknown as { included: unknown }).included = {}; expect(() => validateRentalShape(v)).toThrow(); });
-  it("card ativo com voos ainda em breve", () => { expect(travelTools[1]).toMatchObject({ href: "/veiculo-alugado-ou-aplicativo/" }); expect(travelTools[2]).not.toHaveProperty("href"); });
+  it("catálogo de viagens contém as três ferramentas disponíveis", () => { expect(travelTools.find(tool => tool.href === "/veiculo-alugado-ou-aplicativo/")).toMatchObject({ href: "/veiculo-alugado-ou-aplicativo/" }); expect(travelTools).toHaveLength(3); });
 });
 describe("PDF e Excel", () => {
   it("quatro abas com números reais, espera e caução separados", async () => {
