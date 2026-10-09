@@ -1,19 +1,12 @@
 import { moneyInput, parseMoney } from "./money";
-import { validateTripPlan, type TripPlan, type TripScenario, type TripItem, type TripCategory } from "./calculations/trip-cost";
+import { tripPresets, validateTripPlan, type TripPlan, type TripScenario, type TripItem, type TripCategory } from "./calculations/trip-cost";
 
 export type TripDraftItem = Omit<TripItem, "amount" | "days" | "quantity"> & { amount: string; days: string; quantity: string };
 export type TripDraftScenario = Omit<TripScenario, "days" | "nights" | "people" | "budget" | "items" | "reserve"> & { days: string; nights: string; people: string; budget: string; items: TripDraftItem[]; reserve: { mode: TripScenario["reserve"]["mode"]; amount: string; percent: string } };
 export type TripDraft = { mode: TripPlan["mode"]; scenarios: TripDraftScenario[] };
 export function newTripItem(category: TripCategory, name = "", id = crypto.randomUUID()): TripDraftItem { return { id, category, name, amount: "", mode: "total", days: "1", quantity: "1" }; }
 export function newTripScenario(id = crypto.randomUUID(), name = "Destino 1"): TripDraftScenario {
-  const presets: [TripCategory, string[]][] = [
-    ["tickets", ["Valor das passagens", "Bagagem adicional", "Taxas adicionais", "Outros custos relacionados"]],
-    ["lodging", ["Valor da hospedagem", "Taxas de limpeza", "Taxas de serviço", "Estacionamento da hospedagem", "Outros custos da hospedagem"]],
-    ["food", ["Café da manhã", "Almoço", "Jantar", "Lanches", "Outros gastos alimentares"]],
-    ["transport", ["Aplicativo de transporte", "Aluguel de veículo", "Combustível", "Estacionamento", "Pedágios", "Transporte público", "Transfer", "Outros deslocamentos"]],
-    ["shopping", ["Compras", "Presentes e lembranças", "Gastos pessoais", "Outros"]],
-  ];
-  return { id, name, days: "1", nights: "0", people: "1", budget: "", reserve: { mode: "none", amount: "", percent: "" }, items: presets.flatMap(([category, labels]) => labels.map((label, i) => newTripItem(category, label, `${id}-${category}-${i}`))) };
+  return { id, name, days: "1", nights: "0", people: "1", budget: "", reserve: { mode: "none", amount: "", percent: "" }, items: tripPresets.flatMap(([category, labels]) => labels.map((label, i) => newTripItem(category, label, `${id}-${category}-${i}`))) };
 }
 const money = (text: string) => text.trim() ? parseMoney(text) : null;
 function count(text: string, label: string) { if (!/^\d+$/.test(text.trim())) throw new Error(`${label}: informe um número inteiro.`); return Number(text); }

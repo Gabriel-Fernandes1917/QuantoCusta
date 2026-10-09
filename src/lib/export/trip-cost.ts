@@ -1,8 +1,10 @@
 import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { tripNotes, tripInsights, tripComparisonInsights, tripCategories, type TripResult } from "../calculations/trip-cost";
+import { differentUnitsNote, tripFinancialDifferences, tripNotes, tripInsights, tripComparisonInsights, tripCategories, type TripResult } from "../calculations/trip-cost";
 import { formatMoney, formatPercentage } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
+
+import { quantityText } from "../quantity-text";
 
 const modeLabels = { total: "Total", person: "Por pessoa", night: "Por noite", personDay: "Por pessoa por dia", unit: "Por unidade" };
 const header = (value: string): Cell => ({ value, fontWeight: "bold", backgroundColor: "#164B3B", textColor: "#FFFFFF", wrap: true, height: 30 });
@@ -37,6 +39,11 @@ export function tripSheets(r: TripResult, options: ReportOptions): Sheet<Blob>[]
       comparison.push(["Diferenças: primeiro destino menos segundo",null], ["Total planejado",money(r.differences.total)],["Custo por pessoa",money(r.differences.perPerson)],["Custo médio por dia",money(r.differences.perDay)]);
       r.differences.categories.forEach(c=>comparison.push([`Diferença: ${c.label}`,money(c.delta)]));
     } else comparison.push(["Menor total planejado",money(r.lowest)],["Maior total planejado",money(r.highest)]);
+    if (r.unitDifferences.length) {
+      comparison.push(["Atenção", wrapped(differentUnitsNote)]);
+      r.unitDifferences.forEach(d => comparison.push([d.name, wrapped(d.matches.map(m => `${m.destination}: ${modeLabels[m.mode]}`).join("; "))]));
+    }
+    tripFinancialDifferences(r).forEach(note => comparison.push(["Diferença financeira", wrapped(note)]));
     tripComparisonInsights(r).forEach(note=>comparison.push(["Interpretação",wrapped(note)]));
     sheets.push({sheet:"Comparação de destinos",data:comparison,columns:[{width:50},...r.scenarios.map(()=>({width:40}))]});
   }
@@ -64,24 +71,45 @@ export async function createTripPdf(r: TripResult, options: ReportOptions): Prom
   }
   text(`${options.brand.name} | Gerado em ${reportDate(options.generatedAt)} (horário de Brasília)`);
   text("Resumo do planejamento",true);
-  r.scenarios.forEach(s=>text(`${s.name}: ${s.days} dias, ${s.nights} noites, ${s.people} viajantes. Gastos estimados ${formatMoney(s.subtotal)}; reserva planejada ${formatMoney(s.reserve)}; total planejado ${formatMoney(s.total)}; por pessoa ${formatMoney(s.perPerson)}; por dia ${formatMoney(s.perDay)}.`));
-  tripComparisonInsights(r).forEach(note=>text(note));
-  if(r.scenarios.length>2) text(`Menor total planejado: ${formatMoney(r.lowest)}; maior total planejado: ${formatMoney(r.highest)}. Apenas os valores informados são comparados.`);
-  if(r.differences) {
-    text(`Diferenças absolutas entre ${r.scenarios[0].name} e ${r.scenarios[1].name}: total ${formatMoney(Math.abs(r.differences.total))}; por pessoa ${formatMoney(Math.abs(r.differences.perPerson))}; por dia ${formatMoney(Math.abs(r.differences.perDay))}.`);
+  for (const s of r.scenarios) {
+    // Keep each summary together; the name can occupy several wrapped lines.
+    if (y < 260) { page=doc.addPage([595.28,841.89]); heading(); }
+    const top = y + 17;
+    text(s.name, true);
+    text(`${quantityText(s.days, "dia", "dias")} | ${quantityText(s.nights, "noite", "noites")} | ${quantityText(s.people, "viajante", "viajantes")}`);
+    text(`Total planejado: ${formatMoney(s.total)}`, true);
+    text(`Gastos estimados: ${formatMoney(s.subtotal)} | Reserva planejada: ${formatMoney(s.reserve)}`);
+    text(`Custo por pessoa: ${formatMoney(s.perPerson)} | Custo médio por dia: ${formatMoney(s.perDay)}`);
+    page.drawLine({start:{x:44,y:top},end:{x:551,y:top},thickness:2,color:green});
+    page.drawLine({start:{x:44,y:y+5},end:{x:551,y:y+5},thickness:.5,color:muted});
+    y -= 12;
   }
+  if (r.unitDifferences.length) {
+    text(differentUnitsNote, true);
+    r.unitDifferences.forEach(d => text(`${d.name}: ${d.matches.map(m => `${m.destination}: ${modeLabels[m.mode]}`).join("; ")}.`));
+  }
+  tripComparisonInsights(r).forEach(note=>text(note));
+  if (r.scenarios.length > 1) { text("Diferenças financeiras", true); tripFinancialDifferences(r).forEach(note => text(note)); }
   for(const s of r.scenarios){
     text(s.name,true);
     const input=r.input.scenarios.find(i=>i.id===s.id)!;
     text(`Reserva: ${input.reserve.mode === "none" ? "não adicionada" : input.reserve.mode === "percent" ? `${formatPercentage(input.reserve.percent!)} do subtotal` : "valor fixo"}. A reserva não representa gasto confirmado${s.reservePercentage === null ? "." : `; equivale a ${formatPercentage(s.reservePercentage)} do total planejado.`}`);
     if(s.budget!==null) text(`Orçamento informado ${formatMoney(s.budget)}; ${s.budgetRemaining!<0?"excedente projetado":"restante projetado"} ${formatMoney(Math.abs(s.budgetRemaining!))}; comprometido ${s.budgetPercentage===null?"não calculável (orçamento zero)":formatPercentage(s.budgetPercentage)}.`);
     text("Composição dos gastos (sem reserva)",true);
-    for(const c of s.categories) text(`${c.label}: ${c.considered?`${formatMoney(c.total)}${c.percentage===null?"":` (${formatPercentage(c.percentage)} dos gastos estimados)`}`:"não considerado"}.`);
+    for(const c of s.categories) {
+      if (y < 135) { page=doc.addPage([595.28,841.89]); heading(); }
+      text(`${c.label}: ${c.considered?`${formatMoney(c.total)}${c.percentage===null?"":` (${formatPercentage(c.percentage)} dos gastos estimados)`}`:"não considerado"}.`);
+      if (c.considered) {
+        page.drawRectangle({x:44,y:y+1,width:505,height:5,color:rgb(.9,.93,.9)});
+        if (c.percentage && c.percentage > 0) page.drawRectangle({x:44,y:y+1,width:505*c.percentage/100,height:5,color:green});
+        y -= 14;
+      }
+    }
     if(s.missing.length) text(`Categorias não consideradas: ${s.missing.join(", ")}.`);
     text("Detalhamento dos itens",true);
     const filled=s.details.filter(i=>i.total!==null);
     if(!filled.length)text("Nenhuma despesa preenchida.");
-    filled.forEach(i=>text(`${tripCategories.find(c=>c.id===i.category)!.label} / ${i.name || "Despesa sem nome"}: ${formatMoney(i.amount!)} (${modeLabels[i.mode]}${i.mode==="personDay"?`, ${i.days} dias e ${s.people} viajantes`:i.mode==="night"?`, ${s.nights} noites`:i.mode==="unit"?`, ${i.quantity} unidades`:i.mode==="person"?`, ${s.people} viajantes`:""}${i.category==="activities"?`, ${i.quantity} ocorrências`:""}); total ${formatMoney(i.total!)}.`));
+    filled.forEach(i=>text(`${tripCategories.find(c=>c.id===i.category)!.label} / ${i.name || "Despesa sem nome"}: ${formatMoney(i.amount!)} (${modeLabels[i.mode]}${i.mode==="personDay"?`, ${quantityText(i.days, "dia", "dias")} e ${quantityText(s.people, "viajante", "viajantes")}`:i.mode==="night"?`, ${quantityText(s.nights, "noite", "noites")}`:i.mode==="unit"?`, ${quantityText(i.quantity, "unidade", "unidades")}`:i.mode==="person"?`, ${quantityText(s.people, "viajante", "viajantes")}`:""}${i.category==="activities"?`, ${quantityText(i.quantity, "ocorrência", "ocorrências")}`:""}); total ${formatMoney(i.total!)}.`));
     text("O que mais pesa na sua viagem?",true);tripInsights(s).forEach(note=>text(note));
   }
   if(r.scenarios.length>1){text("Onde estão as maiores diferenças?",true);tripCategories.forEach((c,i)=>{text(`${c.label}: ${r.scenarios.map(s=>`${s.name}: ${s.categories[i].considered?formatMoney(s.categories[i].total):"não considerado"}`).join("; ")}.`);if(r.differences)text(r.differences.categories[i].delta===null?"Faltam valores para comparar esta categoria.":`Diferença absoluta: ${formatMoney(Math.abs(r.differences.categories[i].delta!))}.`);});}

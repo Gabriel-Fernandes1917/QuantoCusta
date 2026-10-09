@@ -9,6 +9,13 @@ export const tripCategories = [
   { id: "shopping", label: "Compras e gastos pessoais" },
   { id: "other", label: "Outros gastos" },
 ] as const;
+export const tripPresets: [TripCategory, string[]][] = [
+    ["tickets", ["Valor das passagens", "Bagagem adicional", "Taxas adicionais", "Outros custos relacionados"]],
+    ["lodging", ["Valor da hospedagem", "Taxas de limpeza", "Taxas de serviço", "Estacionamento da hospedagem", "Outros custos da hospedagem"]],
+    ["food", ["Café da manhã", "Almoço", "Jantar", "Lanches", "Outros gastos alimentares"]],
+    ["transport", ["Aplicativo de transporte", "Aluguel de veículo", "Combustível", "Estacionamento", "Pedágios", "Transporte público", "Transfer", "Outros deslocamentos"]],
+    ["shopping", ["Compras", "Presentes e lembranças", "Gastos pessoais", "Outros"]],
+  ];
 export type TripCategory = typeof tripCategories[number]["id"];
 export type TripItem = { id: string; name: string; category: TripCategory; amount: number | null; mode: "total" | "person" | "night" | "personDay" | "unit"; quantity: number; days: number };
 export type TripScenario = { id: string; name: string; days: number; nights: number; people: number; budget: number | null; items: TripItem[]; reserve: { mode: "none" | "fixed" | "percent"; amount: number | null; percent: number | null } };
@@ -79,7 +86,14 @@ export function calculateTrip(plan: TripPlan) {
   });
   const differentGroups = scenarios.some(s => s.days !== scenarios[0].days || s.people !== scenarios[0].people);
   const differences = scenarios.length === 2 ? { total: scenarios[0].total - scenarios[1].total, perPerson: scenarios[0].perPerson - scenarios[1].perPerson, perDay: scenarios[0].perDay - scenarios[1].perDay, categories: tripCategories.map((c,i) => ({ ...c, delta: scenarios[0].categories[i].considered && scenarios[1].categories[i].considered ? scenarios[0].categories[i].total - scenarios[1].categories[i].total : null })) } : null;
-  return { input: plan, scenarios, differentGroups, differences, lowest: Math.min(...scenarios.map(s => s.total)), highest: Math.max(...scenarios.map(s => s.total)) };
+  const unitDifferences = tripPresets.flatMap(([category, labels]) => labels.flatMap((name, index) => {
+    const matches = active.flatMap(s => {
+      const item = s.items.find(i => i.id === `${s.id}-${category}-${index}` && i.category === category && i.name.trim() === name && i.amount !== null);
+      return item ? [{ destination: s.name.trim() || "Destino sem nome", mode: item.mode }] : [];
+    });
+    return new Set(matches.map(i => i.mode)).size > 1 ? [{ name, matches }] : [];
+  }));
+  return { unitDifferences, input: plan, scenarios, differentGroups, differences, lowest: Math.min(...scenarios.map(s => s.total)), highest: Math.max(...scenarios.map(s => s.total)) };
 }
 export type TripResult = ReturnType<typeof calculateTrip>;
 export type TripScenarioResult = TripResult["scenarios"][number];
@@ -108,4 +122,12 @@ export function tripComparisonInsights(r: TripResult): string[] {
     }
   }
   return notes;
+}
+
+export const differentUnitsNote = "Atenção: alguns gastos foram calculados em unidades diferentes entre os destinos. Confira os valores antes de comparar os totais.";
+export function tripFinancialDifferences(r: TripResult): string[] {
+  const first = r.scenarios[0];
+  return r.scenarios.slice(1).flatMap(s => ([
+    ["Total planejado", "total"], ["Custo por pessoa", "perPerson"], ["Custo médio por dia", "perDay"],
+  ] as const).map(([label, key]) => `${label}: ${s.name} ${s[key] === first[key] ? `tem o mesmo valor que ${first.name}` : `tem ${formatMoney(Math.abs(s[key] - first[key]))} ${s[key] > first[key] ? "a mais" : "a menos"} que ${first.name}`}.`));
 }
