@@ -151,7 +151,7 @@ describe("periodicidades e custos únicos", () => {
 });
 
 describe("relatórios com periodicidades", () => {
-  const options = { brand: { name: "QuantoCusta", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
+  const options = { brand: { name: "Coyler", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
   function reportExample() {
     const v = custom(manualExample(), "custom-fee", "Taxa", 1, 120001, "annual");
     return calculateComparison(v);

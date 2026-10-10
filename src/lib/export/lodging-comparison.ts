@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
+import { styleExcelSheets } from "./excel-style";
+import type { Cell, Row, Sheet } from "write-excel-file/universal";
 import { formatLodgingQuantity, formatTravelTime, lodgingDifferenceText, lodgingNotes, lodgingPriceInsight, lodgingTimeText, mealLabels, transportLabels, tripLabels, usesVehicle, type LodgingResult } from "../calculations/lodging-comparison";
 import { formatMoney } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
@@ -36,8 +36,10 @@ export function lodgingSheets(r: LodgingResult, options: ReportOptions): Sheet<B
   const notes: Row[] = [[header("Premissas"), header("Conteúdo")], ...lodgingNotes.map(note => ["Premissa", wrapped(note)]), ["Planilha editável", wrapped("Valores numéricos sem fórmulas vinculadas: editar as células não recalcula os totais. Células vazias indicam valor não informado ou não aplicável. Tempos ficam separados do dinheiro.")], ["Créditos", reportFooter(options.brand)]];
   return [{ sheet: "Resumo", data: summary, columns: [{ width: 42 }, { width: 65 }, { width: 38 }] }, { sheet: "Hospedagens", data: lodging, columns: [{ width: 48 }, { width: 35 }, { width: 35 }] }, { sheet: "Deslocamentos", data: travel, columns: Array.from({ length: 19 }, (_, i) => ({ width: i < 4 ? 28 : 22 })) }, { sheet: "Premissas", data: notes, columns: [{ width: 28 }, { width: 100 }] }].map(sheet => ({ ...sheet, showGridLines: false }));
 }
-export async function createLodgingExcel(result: LodgingResult, options: ReportOptions) { return writeExcelFile(lodgingSheets(result, options), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
+export async function createLodgingExcel(result: LodgingResult, options: ReportOptions) {
+  const { default: writeExcelFile } = await import("write-excel-file/universal"); return writeExcelFile(styleExcelSheets(lodgingSheets(result, options)), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
 export async function createLodgingPdf(result: LodgingResult, options: ReportOptions) {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   doc.setTitle("Comparar hospedagens"); doc.setAuthor(options.brand.name); doc.setCreationDate(options.generatedAt); doc.setLanguage("pt-BR");
   const green = rgb(22 / 255, 75 / 255, 59 / 255);

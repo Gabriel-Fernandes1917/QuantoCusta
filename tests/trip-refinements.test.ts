@@ -14,7 +14,7 @@ function draft(count = 2) {
     return s;
   }) };
 }
-const options = { brand: { name: "QuantoCusta", domain: "" }, generatedAt: new Date("2026-10-08T12:00:00Z") };
+const options = { brand: { name: "Coyler", domain: "" }, generatedAt: new Date("2026-10-08T12:00:00Z") };
 
 describe("refinamentos da viagem", () => {
   it.each([0, 1, 2])("pluraliza quantidades %i", count => {

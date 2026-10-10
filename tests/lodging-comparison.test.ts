@@ -17,7 +17,7 @@ function scenario(): LodgingComparison {
   Object.assign(p.journeys[1], { distance: 12, minutes: 30 });
   v.places.push(p); return v;
 }
-const options = { brand: { name: "QuantoCusta", domain: "" }, generatedAt: new Date("2026-10-04T12:00:00Z") };
+const options = { brand: { name: "Coyler", domain: "" }, generatedAt: new Date("2026-10-04T12:00:00Z") };
 describe("hospedagem e totais", () => {
   it("cenário solicitado, sem dados de exemplo na interface", () => {
     const v = scenario(), before = structuredClone(v), r = calculateLodgingComparison(v), [a, b] = r.scenarios;

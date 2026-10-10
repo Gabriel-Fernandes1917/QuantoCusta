@@ -66,7 +66,7 @@ describe("tempo e persistência", () => {
   it("nova ferramenta é navegável a partir da Home", () => expect(tools.find(t => t.title === "Comer fora ou cozinhar?")).toMatchObject({ href: "/comer-fora-ou-cozinhar/" }));
 });
 describe("PDF e Excel de alimentação", () => {
-  const options = { brand: { name: "QuantoCusta", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
+  const options = { brand: { name: "Coyler", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
   it("Excel contém quatro abas, centavos convertidos em números e refeições no resumo", async () => { const r = calculateMealRoutine(mealExample()), before = structuredClone(r), sheets = mealSheets(r, options); expect(sheets.map(s => s.sheet)).toEqual(["Resumo", "Refeições", "Detalhamento", "Premissas"]); expect(sheets[0].data.find(row => row[0] === "Total mensal")?.slice(1)).toMatchObject([{ value: 1482.25, type: Number }, { value: 2721.33, type: Number }, { value: 1239.08, type: Number }]); expect(sheets[1].data[1][2]).toMatchObject({ value: 6.25 }); expect(sheets[2].data[1]).toMatchObject(["Café da manhã", "Mamão", { value: 200 }, "g", { value: 8 }, { value: 1 }, "kg", { value: 1.6 }]); expect(sheets[0].data.some(row => row[0] === "Comparação por refeição")).toBe(true); const blob = await createMealExcel(r, options); expect([...new Uint8Array(await blob.arrayBuffer()).slice(0, 4)]).toEqual([80, 75, 3, 4]); expect(r).toEqual(before); });
   it("PDF real contém totais, refeições, detalhamento, tempo e aviso nutricional", async () => {
     const draw = vi.spyOn(PDFPage.prototype, "drawText");

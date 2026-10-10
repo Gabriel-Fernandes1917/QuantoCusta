@@ -1,6 +1,6 @@
-import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { differentUnitsNote, tripFinancialDifferences, tripNotes, tripInsights, tripComparisonInsights, tripCategories, type TripResult } from "../calculations/trip-cost";
+import { styleExcelSheets } from "./excel-style";
+import type { Cell, Row, Sheet } from "write-excel-file/universal";
+import { differentUnitsNote, tripFinancialDifferences, tripNotes, tripInsights, tripComparisonInsights, tripCategories, tripItemModeLabel, type TripResult } from "../calculations/trip-cost";
 import { formatMoney, formatPercentage } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
 
@@ -13,22 +13,25 @@ const number = (value: number): Cell => ({ value, type: Number });
 const wrapped = (value: string): Cell => ({ value, wrap: true, height: 54 });
 export const tripExcelNote = "Esta planilha é um retrato da simulação. Os valores monetários são números editáveis, sem fórmulas vinculadas: editar as células não recalcula os totais. Células vazias indicam valores não informados ou não aplicáveis.";
 
+const summaryObservation = (value: string): Cell => ({ value, columnSpan: 2, wrap: true, height: Math.max(54, Math.ceil(value.length / 48) * 15) });
+
 export function tripSheets(r: TripResult, options: ReportOptions): Sheet<Blob>[] {
   const summary: Row[] = [[header("Quanto custa minha viagem?"), header(options.brand.name)], ["Gerado em", reportDate(options.generatedAt)]];
   r.scenarios.forEach(s => {
     const reserve = r.input.scenarios.find(input => input.id === s.id)!.reserve;
     summary.push(["Forma de reserva", reserve.mode === "none" ? "Não adicionada" : reserve.mode === "fixed" ? "Valor fixo" : "Percentual do subtotal"], ["Reserva fixa informada", reserve.mode === "fixed" ? money(reserve.amount) : null], ["Percentual da reserva informado", reserve.mode === "percent" ? { value: reserve.percent! / 100, type: Number, format: "0.00%" } : null]);
     summary.push([header("Destino"), header(s.name)], ["Dias", number(s.days)], ["Noites", number(s.nights)], ["Viajantes", number(s.people)], ["Gastos estimados", money(s.subtotal)], ["Reserva para imprevistos (planejada)", money(s.reserve)], ["Total planejado", money(s.total)], ["Custo por pessoa", money(s.perPerson)], ["Custo médio por dia", money(s.perDay)], ["Orçamento informado", money(s.budget)], ["Orçamento menos total planejado", money(s.budgetRemaining)], ["Orçamento comprometido", s.budgetPercentage === null ? null : { value: s.budgetPercentage / 100, type: Number, format: "0.0%" }], ["Participação da reserva no total", s.reservePercentage === null ? null : { value: s.reservePercentage / 100, type: Number, format: "0.0%" }], ["Maior categoria de gasto", s.largest?.label ?? "Nenhum gasto positivo"], ["Menor categoria positiva", s.smallest?.label ?? "Nenhum gasto positivo"]);
+    summary.push([null], [header("Categoria"), header("Valor estimado"), header("Participação (%)")]);
     s.categories.forEach(c => summary.push([c.label, c.considered ? money(c.total) : "Não considerado", c.percentage === null ? null : { value: c.percentage / 100, type: Number, format: "0.0%" }]));
-    if(s.missing.length) summary.push(["Categorias não consideradas", wrapped(s.missing.join(", "))]);
-    tripInsights(s).forEach(note => summary.push(["Insight", wrapped(note)]));
+    if(s.missing.length) summary.push(["Categorias não consideradas", summaryObservation(s.missing.join(", "))]);
+    tripInsights(s).forEach(note => summary.push(["Insight", summaryObservation(note)]));
     summary.push([null]);
   });
   const details: Row[] = [["Destino", "Categoria", "Item", "Forma de cálculo", "Valor informado", "Quantidade / ocorrências", "Dias de refeição", "Viajantes", "Noites", "Total estimado"].map(header)];
-  r.scenarios.forEach(s => s.details.forEach(i => details.push([s.name, tripCategories.find(c=>c.id===i.category)!.label, i.name || "Despesa sem nome", modeLabels[i.mode], money(i.amount), i.mode === "unit" || i.category === "activities" ? number(i.quantity) : null, i.mode === "personDay" ? number(i.days) : null, number(s.people), number(s.nights), money(i.total)])));
+  r.scenarios.forEach(s => s.details.forEach(i => details.push([s.name, tripCategories.find(c=>c.id===i.category)!.label, i.name || "Despesa sem nome", (i.category === "activities" ? tripItemModeLabel(i) : modeLabels[i.mode]), money(i.amount), i.mode === "unit" || i.category === "activities" ? number(i.quantity) : null, i.mode === "personDay" ? number(i.days) : null, number(s.people), number(s.nights), money(i.total)])));
   const notes: Row[] = [[header("Premissas"),header("Conteúdo")], ...tripNotes.map(note=>["Premissa",wrapped(note)]),["Planilha editável",wrapped(tripExcelNote)],["Créditos",wrapped(reportFooter(options.brand))]];
   const sheets: Sheet<Blob>[] = [
-    { sheet:"Resumo",data:summary,columns:[{width:48},{width:80},{width:22}] },
+    { sheet:"Resumo",data:summary,columns:[{width:48},{width:32},{width:22}] },
     { sheet:"Despesas detalhadas",data:details,columns:Array.from({length:10},(_,i)=>({width:i<4?30:22})) },
   ];
   if(r.scenarios.length>1) {
@@ -51,9 +54,11 @@ export function tripSheets(r: TripResult, options: ReportOptions): Sheet<Blob>[]
   return sheets.map(sheet=>({...sheet,showGridLines:false}));
 }
 export async function createTripExcel(result: TripResult, options: ReportOptions): Promise<Blob> {
-  return writeExcelFile(tripSheets(result,options),{fontFamily:"Arial",fontSize:11}).toBlob();
+  const { default: writeExcelFile } = await import("write-excel-file/universal");
+  return writeExcelFile(styleExcelSheets(tripSheets(result,options)),{fontFamily:"Arial",fontSize:11}).toBlob();
 }
 export async function createTripPdf(r: TripResult, options: ReportOptions): Promise<Uint8Array> {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc=await PDFDocument.create(), font=await doc.embedFont(StandardFonts.Helvetica), bold=await doc.embedFont(StandardFonts.HelveticaBold);
   doc.setTitle("Quanto custa minha viagem?"); doc.setAuthor(options.brand.name); doc.setCreationDate(options.generatedAt); doc.setLanguage("pt-BR");
   const green=rgb(22/255,75/255,59/255), muted=rgb(83/255,102/255,94/255);
@@ -109,7 +114,7 @@ export async function createTripPdf(r: TripResult, options: ReportOptions): Prom
     text("Detalhamento dos itens",true);
     const filled=s.details.filter(i=>i.total!==null);
     if(!filled.length)text("Nenhuma despesa preenchida.");
-    filled.forEach(i=>text(`${tripCategories.find(c=>c.id===i.category)!.label} / ${i.name || "Despesa sem nome"}: ${formatMoney(i.amount!)} (${modeLabels[i.mode]}${i.mode==="personDay"?`, ${quantityText(i.days, "dia", "dias")} e ${quantityText(s.people, "viajante", "viajantes")}`:i.mode==="night"?`, ${quantityText(s.nights, "noite", "noites")}`:i.mode==="unit"?`, ${quantityText(i.quantity, "unidade", "unidades")}`:i.mode==="person"?`, ${quantityText(s.people, "viajante", "viajantes")}`:""}${i.category==="activities"?`, ${quantityText(i.quantity, "ocorrência", "ocorrências")}`:""}); total ${formatMoney(i.total!)}.`));
+    filled.forEach(i=>text(`${tripCategories.find(c=>c.id===i.category)!.label} / ${i.name || "Despesa sem nome"}: ${formatMoney(i.amount!)} (${(i.category === "activities" ? tripItemModeLabel(i) : modeLabels[i.mode])}${i.mode==="personDay"?`, ${quantityText(i.days, "dia", "dias")} e ${quantityText(s.people, "viajante", "viajantes")}`:i.mode==="night"?`, ${quantityText(s.nights, "noite", "noites")}`:i.mode==="unit"?`, ${quantityText(i.quantity, "unidade", "unidades")}`:i.mode==="person"?`, ${quantityText(s.people, "viajante", "viajantes")}`:""}${i.category==="activities"?`, ${quantityText(i.quantity, "ocorrência", "ocorrências")}`:""}); total ${formatMoney(i.total!)}.`));
     text("O que mais pesa na sua viagem?",true);tripInsights(s).forEach(note=>text(note));
   }
   if(r.scenarios.length>1){text("Onde estão as maiores diferenças?",true);tripCategories.forEach((c,i)=>{text(`${c.label}: ${r.scenarios.map(s=>`${s.name}: ${s.categories[i].considered?formatMoney(s.categories[i].total):"não considerado"}`).join("; ")}.`);if(r.differences)text(r.differences.categories[i].delta===null?"Faltam valores para comparar esta categoria.":`Diferença absoluta: ${formatMoney(Math.abs(r.differences.categories[i].delta!))}.`);});}

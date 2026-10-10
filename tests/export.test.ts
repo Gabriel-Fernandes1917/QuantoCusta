@@ -5,15 +5,15 @@ import { createPlanningPdf } from "../src/lib/export/pdf";
 import { createPlanningExcel, planningSheets } from "../src/lib/export/excel";
 import { reportDate, reportFilename, reportFooter, reportNotes } from "../src/lib/export/report";
 
-const options = { brand: { name: "QuantoCusta", domain: "quantocusta.example" }, generatedAt: new Date("2026-10-02T01:30:00Z") };
+const options = { brand: { name: "Coyler", domain: "coyler.example" }, generatedAt: new Date("2026-10-02T01:30:00Z") };
 
 describe("relatórios do resultado calculado", () => {
   it("usa a data de Brasília e um domínio configurável", () => {
     expect(reportDate(options.generatedAt)).toBe("01/10/2026, 22:30");
-    expect(reportFilename(options.generatedAt, "pdf")).toBe("quantocusta-planejamento-2026-10-01.pdf");
-    expect(reportFilename(options.generatedAt, "xlsx")).toBe("quantocusta-planejamento-2026-10-01.xlsx");
-    expect(reportFooter(options.brand)).toBe("Planejamento criado com QuantoCusta — quantocusta.example");
-    expect(reportFooter({ name: "QuantoCusta", domain: "" })).toBe("Planejamento criado com QuantoCusta");
+    expect(reportFilename(options.generatedAt, "pdf")).toBe("coyler-planejamento-2026-10-01.pdf");
+    expect(reportFilename(options.generatedAt, "xlsx")).toBe("coyler-planejamento-2026-10-01.xlsx");
+    expect(reportFooter(options.brand)).toBe("Planejamento criado com Coyler — coyler.example");
+    expect(reportFooter({ name: "Coyler", domain: "" })).toBe("Planejamento criado com Coyler");
   });
   it("exporta duas abas, dados numéricos, moeda e periodicidade original", () => {
     const result = calculateCostOfLiving({ ...emptySimulation(), hasVehicle: true, salary: 100000, rent: 150000, vehicleTax: 240000 });
@@ -62,7 +62,7 @@ describe("relatórios do resultado calculado", () => {
     const bytes = await createPlanningPdf(result, options);
     const pdf = await PDFDocument.load(bytes);
     expect(pdf.getTitle()).toBe("Meu planejamento de custo de vida");
-    expect(pdf.getAuthor()).toBe("QuantoCusta");
+    expect(pdf.getAuthor()).toBe("Coyler");
     expect(pdf.getCreationDate()).toEqual(options.generatedAt);
     expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1);
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");

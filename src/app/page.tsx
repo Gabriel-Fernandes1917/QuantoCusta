@@ -3,8 +3,10 @@ import { HomeFeedback } from "@/components/home-feedback";
 import { DecisionIllustration } from "@/components/decision-illustration";
 import { tools, travelTools } from "@/lib/tools";
 import { defaultOpenGraph, siteConfig } from "@/lib/site-config";
+import { StructuredData } from "@/components/structured-data";
+import { websiteStructuredData } from "@/lib/seo";
 
-const title = "QuantoCusta | Descubra o custo real das suas escolhas";
+const title = "Coyler — Compare custos e tome decisões melhores";
 const description = "Compare moradia, alimentação, transporte e viagens. Descubra custos que passam despercebidos e tome decisões com mais clareza usando ferramentas gratuitas.";
 export const metadata: Metadata = {
   title: { absolute: title }, description,
@@ -16,11 +18,12 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <>
+      <StructuredData data={websiteStructuredData} />
       <section className="hero container" aria-labelledby="hero-title">
         <div className="hero-copy">
           <p className="eyebrow"><span className="status-dot" aria-hidden="true" /> Escolhas mais claras começam aqui</p>
-          <h1 id="hero-title">E se a opção mais barata <span>estiver custando mais?</span></h1>
-          <p className="hero-description">Compare escolhas do dia a dia e das suas viagens. Descubra gastos que passam despercebidos e tome decisões com mais clareza, usando seus próprios números.</p>
+          <h1 id="hero-title">O menor preço nem sempre é <span>o menor custo.</span></h1>
+          <p className="hero-description">{siteConfig.heroDescription}</p>
           <a href="#ferramentas" className="button">Explorar ferramentas <span aria-hidden="true">↗</span></a>
           <p className="hero-note">Preço não é necessariamente custo.</p>
           <nav className="planning-shortcuts" aria-label="O que você quer planejar?">
@@ -75,17 +78,21 @@ export default function Home() {
         </div>
       </section>
       <HomeFeedback />
-      <section className="container closing" aria-label="Mensagem do QuantoCusta"><p>Sua próxima escolha <br />começa com <strong>um pouco mais de clareza.</strong></p><span>{siteConfig.name}</span></section>
+      <section className="container closing" aria-label="Mensagem da Coyler"><p>Sua próxima escolha <br />começa com <strong>um pouco mais de clareza.</strong></p><span>{siteConfig.name}</span></section>
     </>
   );
 }
 
 function ToolCard({ tool }: { tool: { number: string; title: string; tag: string; description: string; href?: string } }) {
-  return <article className={`tool-card${tool.href === "/custo-da-viagem/" ? " trip-featured" : ""}`}>
+  const className = `tool-card${tool.href === "/custo-da-viagem/" ? " trip-featured" : ""}`;
+  const content = <>
     <div className="card-top"><span className="tool-number" aria-hidden="true">{tool.number}</span><span className="badge">{tool.href ? "Disponível" : "Em breve"}</span></div>
     <p className="tool-tag">{tool.tag}</p>
     <h3>{tool.title}</h3>
     <p className="tool-description">{tool.description}</p>
-    {tool.href && <a className="text-link" href={tool.href} aria-label={`Abrir ferramenta: ${tool.title}`}>Abrir ferramenta →</a>}
-  </article>;
+    {tool.href && <span className="text-link">Abrir ferramenta →</span>}
+  </>;
+  return tool.href
+    ? <a className={className} href={tool.href} aria-label={`Abrir ferramenta: ${tool.title}`}>{content}</a>
+    : <article className={className}>{content}</article>;
 }

@@ -8,7 +8,7 @@ import { createVehicleExcel, createVehiclePdf, vehicleSheets } from "../src/lib/
 function scenario(): VehicleComparison {
   return { ...emptyVehicleComparison(), vehicle: "car", ownership: "financed", payment: 90000, ipva: 180000, licensing: 20000, insurance: 240000, maintenance: 120000, fuelMode: "estimate", kilometers: 800, efficiency: 12, fuelPrice: 630, tolls: 0, parking: 10000, app: "car", rides: 10, fare: 2500, wait: 8 };
 }
-const options = { brand: { name: "QuantoCusta", domain: "" }, generatedAt: new Date("2026-10-04T12:00:00Z") };
+const options = { brand: { name: "Coyler", domain: "" }, generatedAt: new Date("2026-10-04T12:00:00Z") };
 describe("veículo e situação", () => {
   it.each(["car", "motorcycle"] as const)("%s usa a mesma matemática", vehicle => { const v = scenario(); v.vehicle = vehicle; expect(calculateVehicleComparison(v).monthly).toBe(188667); });
   it("já possuo ignora pagamento sem eliminar custos de possuir", () => { const v = scenario(); v.ownership = "owned"; const r = calculateVehicleComparison(v); expect(r.own).toBe(46667); expect(r.costs.some(c => c.id === "payment")).toBe(false); });

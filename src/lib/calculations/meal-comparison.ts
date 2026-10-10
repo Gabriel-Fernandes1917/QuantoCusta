@@ -156,6 +156,6 @@ export const mealNotes = [
   "Gás, energia e outros custos de preparo são estimativas mensais adicionais. Entram apenas no total geral em casa, sem divisão entre refeições. Não inclua despesas que existiriam mesmo sem cozinhar.",
   "A distribuição percentual considera somente alimentos/refeições, sem custos adicionais de preparo. Maior e menor diferença comparam o tamanho da diferença mensal e sempre indicam qual cenário custa mais. Empates são apresentados juntos.",
   "Tempo informado é separado do dinheiro e não recebe valor monetário. Custos de preparo e tempo são opcionais. Campos essenciais vazios são não informados; zero digitado é preservado. Refeições incompletas ficam fora da comparação até seus dados serem preenchidos.",
-  "O QuantoCusta compara apenas custos e tempos informados. A ferramenta não avalia aspectos nutricionais das refeições.",
+  "A Coyler compara apenas custos e tempos informados. A ferramenta não avalia aspectos nutricionais das refeições.",
   "Estimativas informativas baseadas exclusivamente nos valores informados, sem médias de mercado, receitas ou recomendações financeiras.",
 ];

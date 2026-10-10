@@ -69,9 +69,11 @@ export function VehicleComparisonCalculator({ reportBrand }: { reportBrand: Repo
     catch { setNotice("Não foi possível salvar. Seus valores foram mantidos."); }
   }
   function clear() {
+    let removed = true;
     try { localStorage.removeItem(VEHICLE_STORAGE_KEY); }
-    catch { setNotice("Não foi possível limpar os dados salvos. Tente novamente."); return; }
-    setChoices(emptyVehicleComparison()); setDraft(emptyDraft()); setErrors({}); setResult(null); setNotice("Os dados desta ferramenta foram limpos.");
+    catch { removed = false; }
+    setChoices(emptyVehicleComparison()); setDraft(emptyDraft()); setErrors({}); setResult(null);
+    setNotice(removed ? "Os dados desta ferramenta foram limpos." : "Campos e resultados limpos. Não foi possível remover a cópia salva no navegador; limpe os dados do site nas configurações do navegador.");
   }
   function field(key: NumericField, label = fieldLabels[key], hint?: string) {
     if (!quantityFields.includes(key)) return <MoneyInput id={key} label={label} value={draft[key]} onChange={text => update(key, text)} error={errors[key]} hint={hint} />;

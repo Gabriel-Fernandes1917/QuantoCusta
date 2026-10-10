@@ -65,9 +65,11 @@ export function LodgingComparisonCalculator({ reportBrand }: { reportBrand: Repo
     catch { setNotice("Não foi possível salvar. Seus valores foram mantidos."); }
   }
   function clear() {
+    let removed = true;
     try { localStorage.removeItem(LODGING_STORAGE_KEY); }
-    catch { setNotice("Não foi possível limpar os dados salvos. Tente novamente."); return; }
-    setValues(emptyLodgingComparison()); setDraft({}); setErrors({}); setResult(null); setNotice("Os dados desta ferramenta foram limpos.");
+    catch { removed = false; }
+    setValues(emptyLodgingComparison()); setDraft({}); setErrors({}); setResult(null);
+    setNotice(removed ? "Os dados desta ferramenta foram limpos." : "Campos e resultados limpos. Não foi possível remover a cópia salva no navegador; limpe os dados do site nas configurações do navegador.");
   }
   function field(path: string, label: string, money = false, hint?: string) {
     if (money) return <MoneyInput id={path} label={label} value={inputValue(path, true)} onChange={text => update(path, text)} error={errors[path]} hint={hint} />;

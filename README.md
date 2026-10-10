@@ -1,8 +1,22 @@
-# QuantoCusta
+# Coyler
 
 **Preço não é necessariamente custo.**
 
 Portal brasileiro para comparar custos e planejar escolhas de vida e viagens. Inclui sete ferramentas disponíveis, Home e Privacidade, sem cadastro ou backend.
+
+## Ferramentas da V1
+
+| Ferramenta | Rota |
+|---|---|
+| Calculadora de custo de vida | `/calculadora-custo-de-vida/` |
+| Comparador de imóveis | `/comparar-imoveis/` |
+| Comer fora ou cozinhar? | `/comer-fora-ou-cozinhar/` |
+| Veículo próprio ou aplicativo? | `/veiculo-proprio-ou-aplicativo/` |
+| Comparador de hospedagens | `/comparar-hospedagens/` |
+| Veículo alugado ou aplicativo? | `/veiculo-alugado-ou-aplicativo/` |
+| Quanto custa minha viagem? | `/custo-da-viagem/` |
+
+O escopo funcional está encerrado. `SPEC.md` consolida a V1; a preparação para publicação corrige estabilidade e usabilidade, sem novas funcionalidades.
 
 ## Planejamento de viagem
 
@@ -16,6 +30,10 @@ Portal brasileiro para comparar custos e planejar escolhas de vida e viagens. In
 
 Os testes cobrem conversões por pessoa, noite, dia e quantidade, reservas, diferenças, cenários incompletos, limites seguros, persistência e geração real de PDF/XLSX. Os resultados não avaliam qualidade ou recomendam destinos. Não há preços automáticos nem integração entre ferramentas; a transferência de totais é manual.
 
+“Uma viagem” valida e calcula somente o primeiro destino. Os demais permanecem como rascunhos em memória e reaparecem ao voltar a “Comparar destinos”; relatórios incluem somente cenários calculados. Salvar continua validando todos os destinos preservados no formato existente: pendências impedem a gravação e são indicadas para correção, sem descartar rascunhos nem substituir uma cópia salva válida.
+
+Nomes vazios usam “Destino 1” a “Destino 4” no formulário, nos erros, nos resultados e nos relatórios. Passeios usam “Valor por ocorrência” ou “Valor por pessoa por ocorrência”; a matemática mantém o multiplicador de ocorrências e, quando aplicável, viajantes. Erros selecionam o destino, abrem a seção responsável, associam a mensagem ao campo e movem o foco sem perder os valores.
+
 O feedback da Home usa links `mailto:` com `target="_blank"` e `rel="noopener noreferrer"`, além da alternativa de copiar o endereço. A abertura depende do navegador e do aplicativo configurado; não há confirmação de envio nem inclusão automática de dados da simulação.
 
 ## Stack
@@ -23,6 +41,8 @@ O feedback da Home usa links `mailto:` com `target="_blank"` e `rel="noopener no
 Next.js (App Router), React, TypeScript e Tailwind CSS. ESLint para lint e Vitest para testes. PDF com `pdf-lib` e XLSX com `write-excel-file`. Exportação estática, sem backend, APIs, banco de dados ou autenticação.
 
 TypeScript foi limitado à linha 6.0 para compatibilidade com o parser do ESLint. O ESLint 9 é a linha aceita pelos plugins incluídos na configuração atual do Next.js; o npm informa que essa linha deixou de receber suporte. A migração para ESLint 10 deve acontecer quando esses plugins declararem compatibilidade, sem forçar dependências incompatíveis.
+
+Risco conhecido da auditoria pré-publicação: `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces@3.0.3` possui o advisory [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), relacionado a esgotamento da pilha com padrões aninhados. Na auditoria, `npm audit` indicou cinco pacotes afetados dessa cadeia de desenvolvimento e `npm audit --omit=dev` indicou zero vulnerabilidades. Não foi aplicada atualização forçada. Reavaliar com `npm audit` e atualizar somente quando houver solução compatível e validada.
 
 ## Executar localmente
 
@@ -53,11 +73,11 @@ Também são testados veículo próprio ativado/desativado, conversão de IPVA/s
 ```text
 src/app/                      Páginas, layout, estilos, favicon, robots e sitemap
 src/components/               Header, footer, input monetário, cards e distribuição
-src/components/calculators/   Interface interativa da calculadora de custo de vida
+src/components/calculators/   Interfaces interativas das sete ferramentas
 src/hooks/                    Reservado para hooks futuros
 src/lib/site-config.ts        Nome, slogan, descrição e domínio
 src/lib/tools.ts              Conteúdo dos cards de ferramentas
-src/lib/calculations/         Funções puras e campos do custo de vida
+src/lib/calculations/         Modelos, validações e cálculos puros das sete ferramentas
 src/lib/money.ts              Conversão e formatação em centavos inteiros
 src/lib/simulation-storage.ts Validação e serialização da simulação salva
 src/lib/export/               PDF, Excel, download e apresentação comum dos relatórios
@@ -65,7 +85,7 @@ tests/                        Testes Vitest
 public/                       Imagem Open Graph
 ```
 
-A pasta de hooks segue reservada. Não há código antecipado para as outras calculadoras.
+A pasta de hooks segue reservada. Cada ferramenta existente possui cálculo, interface, persistência e exportação próprios, com componentes monetários e estilos compartilhados.
 
 ## Calculadora de custo de vida
 
@@ -103,7 +123,7 @@ O rodapé é configurado em `src/lib/site-config.ts`: `reportDomain` usa o domí
 
 ## Build e deploy
 
-Configure `SITE_URL` com o domínio público real, por exemplo `https://seu-dominio.com`, **antes** de executar `npm run build`. Sem essa variável, o fallback é `http://localhost:3000`, adequado apenas ao desenvolvimento. Canonical, Open Graph e sitemap dependem dessa configuração em tempo de build.
+Confira `SITE_URL=https://coyler.com.br` com o domínio planejado, **antes** de executar `npm run build`. Sem essa variável, a configuração usa o domínio planejado `https://coyler.com.br`. Isso não confirma registro, DNS ou hospedagem. Para uma origem local deliberada, configure `SITE_URL=http://localhost:3000`. Canonical, Open Graph e sitemap dependem dessa configuração em tempo de build.
 
 O build gera `out/`. Publique o conteúdo dessa pasta em uma hospedagem estática com HTTPS, suporte a `index.html` por diretório e página 404. Use `npm ci` como instalação e `npm run build` como comando de build. Não é necessário manter um processo Node em produção. `next start` não serve uma exportação estática.
 
@@ -119,7 +139,7 @@ Altere nome e slogan em `src/lib/site-config.ts`, texto da Home em `src/app/page
 
 Depois da aprovação da próxima etapa, uma nova calculadora deverá ter sua rota em `src/app/`, interface em `src/components/calculators/`, funções puras em `src/lib/calculations/` e testes em `tests/`. Reutilize os componentes monetários e de resultados. Acrescente a rota ao sitemap e disponibilize seu card em `src/lib/tools.ts` apenas quando funcional.
 
-API, cidades, contas, histórico, monetização e as outras calculadoras permanecem fora desta etapa.
+API, cidades, contas, histórico, monetização e ferramentas além das sete listadas permanecem fora da V1. Registro/configuração do domínio planejado, hospedagem e detalhes do provedor na Política de Privacidade seguem pendentes; o site não foi publicado.
 
 ## Comparador de imóveis
 
@@ -195,6 +215,47 @@ Locação = diária × diárias ou total informado. Combustível = km / km/L × 
 
 Espera usa apenas minutos informados × frequência, sem monetização nem duração dos trajetos. Nenhuma espera preenchida é “não informada”; trechos ausentes tornam a soma “parcial”. Os relatórios mantêm essa distinção. PDF A4 paginado inclui entradas, totais, composição, corridas, espera, caução separada e premissas. Excel tem Resumo, Veículo alugado, Corridas e Premissas, com números editáveis e sem recálculo automático.
 
-Salvar é opcional, na chave independente `quantocusta:rental-comparison:v1`; limpar só remove essa simulação. SEO, canonical, Open Graph, sitemap e card da Home incluem a ferramenta. Comparar voos continua Em breve. Não busca preços ou rotas, não aplica multiplicadores de tarifa, não avalia conforto nem recomenda uma estratégia. Limites do formulário: até 50 corridas e 50 extras, nomes com até 80 caracteres e quantidades até 1 milhão. O cenário de regressão está apenas nos testes: veículo R$ 1.560,00, aplicativo R$ 520,00, diferença R$ 1.040,00 e espera 137 minutos (2h17).
+Salvar é opcional, na chave independente `quantocusta:rental-comparison:v1`; limpar só remove essa simulação. SEO, canonical, Open Graph, sitemap e card da Home incluem a ferramenta. Comparar voos está fora da V1. Não busca preços ou rotas, não aplica multiplicadores de tarifa, não avalia conforto nem recomenda uma estratégia. Limites do formulário: até 50 corridas e 50 extras, nomes com até 80 caracteres e quantidades até 1 milhão. O cenário de regressão está apenas nos testes: veículo R$ 1.560,00, aplicativo R$ 520,00, diferença R$ 1.040,00 e espera 137 minutos (2h17).
 
 `tests/lodging-comparison.test.ts` cobre 116 casos de preços, refeições, estacionamentos, modos e tipos de deslocamento, locais compartilhados, combustível, tempo, diferenças, precisão, validação, persistência e geração real dos relatórios. No cenário de 2 pessoas/4 noites, sem custo adicional informado de estacionamento da hospedagem, Hotel Centro totaliza R$ 2.044,80 e Hotel Econômico R$ 1.868,80: diferença R$ 176,00, com 40 e 120 minutos de deslocamento respectivamente. A ferramenta compara somente os custos informados associados à hospedagem e não recomenda uma opção.
+
+## Regressões de estabilidade
+
+Nomes extensos quebram nos resultados sem ocultar valores ou criar rolagem horizontal. A limpeza de veículo próprio, hospedagens e veículo alugado sempre esvazia os campos e resultados em memória; se localStorage.removeItem falhar, o aviso informa que a cópia salva não pôde ser removida. Salvar e restaurar continuam com seus tratamentos de erro e formatos originais.
+
+`tests/trip-stability.test.ts` integra `npm test` e cobre modos, rascunhos, erros identificados, nomes, multiplicadores e conteúdo dos relatórios. Para a integração de produção, sirva `out/` em `127.0.0.1:4173` e execute Chrome headless com perfil isolado e porta de depuração 9222. Rode `node tests/prepublication-browser-check.mjs` e `node tests/trip-browser-check.mjs`.
+
+A verificação pré-publicação testa as sete ferramentas, relatórios gerados em memória, salvar/restaurar/limpar, falhas `SecurityError`, nomes de 80 caracteres sem espaços em 320/390 px e correção de despesas com foco acessível. Os dados do perfil de teste são restaurados ao final. Não há downloads gravados pelo novo teste. Alterações somente de formatação monetária ao perder foco mantêm o resultado válido da viagem.
+
+## Marca Coyler e temas
+
+A marca pública, os metadados e os relatórios usam Coyler; o logotipo textual é `coyler.` com símbolo SVG próprio. `public/og-image.svg` é a fonte vetorial da imagem PNG de compartilhamento. O favicon SVG e os PNGs de 32/180 px usam o mesmo símbolo. Os documentos continuam claros para impressão, independentemente do tema.
+
+As chaves internas `quantocusta:*` das simulações foram preservadas por compatibilidade. Não representam a marca pública e não devem ser renomeadas sem migração. Os nomes dos downloads agora começam com `coyler-`.
+
+`src/lib/theme.ts` aplica o tema antes da renderização do corpo. O seletor no header oferece Claro, Escuro e Automático. A primeira visita acompanha o sistema sem gravar preferência; escolhas explícitas são salvas em `coyler:theme:v1`. Automático responde a mudanças do sistema; abas sincronizam escolhas via evento storage. Se o armazenamento falhar, a seleção ainda funciona na visita. Não há provider global nem dependência nova. CSS oferece fallback ao sistema sem JavaScript. O aviso de hidratação é suprimido apenas no elemento html, cujos atributos de tema são alterados pelo script inicial; componentes continuam com hidratação normal.
+
+## SEO e publicação da Coyler
+
+A URL base fica em `src/lib/site-config.ts`. `pageMetadata` padroniza canonical, Open Graph e Twitter específicos de cada página. Sitemap usa o catálogo real de ferramentas e não inventa lastModified. A Home contém WebSite e as sete calculadoras contêm WebApplication em JSON-LD, sem organização jurídica, estrelas, reviews ou volumes inventados. Isso não garante resultados enriquecidos ou posições de busca. Links entre ferramentas e conteúdo explicativo são HTML estático.
+
+PDF e Excel são carregados separadamente: pedir Excel não baixa a biblioteca PDF. Fontes são locais/do sistema, ilustrações são SVG e não há serviços de imagem ou tracking. Medir bundles e métricas locais não equivale a certificar Core Web Vitals de produção; LCP/INP/CLS de campo dependem do deploy e uso real.
+
+Checklist externo (nenhuma dessas ações foi realizada):
+
+- Confirmar e registrar coyler.com.br; escolher provedor e configurar DNS/HTTPS.
+- Publicar `out/`, servir index.html por diretório e 404.html com status HTTP 404. Não aplicar fallback de SPA para URLs inexistentes.
+- Configurar redirecionamentos HTTP para HTTPS e www para não-www no provedor, nunca com redirects de servidor dentro do export estático.
+- Usar cache longo/imutável nos assets com hash, compressão Brotli/gzip e revalidação de HTML. Revisar CSP conforme os scripts inline de tema/JSON-LD e do Next; não bloquear esses scripts sem fornecer hashes compatíveis.
+- Completar a Política de Privacidade com o provedor real e seus dados técnicos.
+- Confirmar HTTPS, canonical, sitemap, links e relatórios na origem pública; testar Safari/iOS, Android, teclado e zoom.
+- Verificar propriedade real no Google Search Console e Bing Webmaster Tools, adicionar o sitemap e usar inspeção de URLs. Não adicionar códigos fictícios.
+- Medir Lighthouse/PageSpeed e acompanhar LCP, INP e CLS de campo quando houver dados. O projeto não está publicado nem sua indexação foi confirmada.
+
+Referências técnicas: [Metadata API do Next.js](https://nextjs.org/docs/app/api-reference/functions/generate-metadata), [JSON-LD no Next.js](https://nextjs.org/docs/app/guides/json-ld), [dados estruturados de apps](https://developers.google.com/search/docs/appearance/structured-data/software-app) e [Web Vitals](https://web.dev/articles/vitals).
+
+### Verificação do rebranding, tema e SEO
+
+`npm test` inclui `tests/theme.test.ts`, `tests/seo.test.ts` e os testes de configuração. Com o export servido em 4173 e Chrome isolado em 9222, `node tests/coyler-browser-check.mjs` verifica tema inicial antes do primeiro frame, recarga, preferência do sistema, teclado, movimento reduzido, storage bloqueado, metadados/JSON-LD das nove páginas, links, assets e contraste de textos visíveis. Também verifica que Excel não carrega o chunk PDF. `node tests/prepublication-browser-check.mjs` exercita cenários e exportações das sete ferramentas em ambos os temas e nas seis larguras especificadas.
+
+O teste de contraste é uma verificação básica de texto visível com fundos sólidos, não uma certificação de acessibilidade. Reflow também é exercitado com ampliação CSS de 200%; zoom real e leitor de tela permanecem parte da revisão manual em dispositivos.

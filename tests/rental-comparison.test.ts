@@ -14,7 +14,7 @@ function scenario(): RentalComparison {
   v.rides = [["Aeroporto ↔ Hotel", 1, 6000, 7000, 10, 15], ["Hotel ↔ Centro", 4, 2500, 3000, 8, 10], ["Hotel ↔ atração", 2, 4000, 4500, 10, 10]].map(([name, count, outwardFare, returnFare, outwardWait, returnWait], i) => Object.assign(emptyRentalRide(String(i)), { name, kind: "round", count, outwardFare, returnFare, outwardWait, returnWait }));
   return v;
 }
-const options = { brand: { name: "QuantoCusta", domain: "quantocusta.test" }, generatedAt: new Date("2026-10-06T12:00:00Z") };
+const options = { brand: { name: "Coyler", domain: "coyler.test" }, generatedAt: new Date("2026-10-06T12:00:00Z") };
 describe("locação e adicionais", () => {
   it("usa valor total sem depender de diárias antigas", () => { const v = minimal(); v.rentalDays = 100; expect(calculateRentalComparison(v).rental).toBe(10000); });
   it("diária × diárias, independente dos dias da viagem", () => { const v = minimal(); Object.assign(v, { priceMode: "daily", rentalDays: 3, rentalPrice: 15000 }); expect(calculateRentalComparison(v).rental).toBe(45000); expect(calculateRentalComparison(v).vehiclePerDay).toBe(6429); });

@@ -9,7 +9,7 @@ function routine(home = 1000, outside: number | null = 2000): MealRoutine {
   Object.assign(v.meals[0], { enabled: true, frequency: 3, outside, ingredients: [{ id: "item", name: "pao integral", used: 1, usedUnit: "unit", price: home, bought: 1, boughtUnit: "unit" }] });
   return v;
 }
-const options = { brand: { name: "QuantoCusta", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
+const options = { brand: { name: "Coyler", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
 describe("vazio e zero informado", () => {
   it.each(["", " ", null, undefined])("campo essencial %s continua não informado", text => {
     expect(parseMealValue(text, true)).toBeNull(); expect(parseMealValue(text, false)).toBeNull();

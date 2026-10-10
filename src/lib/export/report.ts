@@ -13,7 +13,7 @@ export function reportDate(date: Date): string {
 export function reportFilename(date: Date, extension: "pdf" | "xlsx"): string {
   const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Sao_Paulo" }).formatToParts(date);
   const part = (type: string) => parts.find(item => item.type === type)!.value;
-  return `quantocusta-planejamento-${part("year")}-${part("month")}-${part("day")}.${extension}`;
+  return `coyler-planejamento-${part("year")}-${part("month")}-${part("day")}.${extension}`;
 }
 
 export function reportFooter(brand: ReportBrand): string {

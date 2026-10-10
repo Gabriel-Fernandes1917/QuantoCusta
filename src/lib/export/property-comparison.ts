@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
+import { styleExcelSheets } from "./excel-style";
+import type { Cell, Row, Sheet } from "write-excel-file/universal";
 import { breakEvenNote, breakEvenText, comparisonNotes, periodLabels, type Detail, type ComparisonResult } from "../calculations/property-comparison";
 import { formatMoney } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
@@ -32,7 +32,8 @@ export function comparisonSheets(result: ComparisonResult, options: ReportOption
   if (result.unanswered.length) notes.push(["Sem resposta", { value: `Diferenças sem custo atribuído: ${result.unanswered.join(", ")}.`, wrap: true, height: 44 }]);
   return [{ sheet: "Resumo", data: summary, columns: [42, 32, 32, 26].map(width => ({ width })), showGridLines: false }, { sheet: "Comparação detalhada", data: detail, columns: [26, 32, 18, 18, 24, 24, 24, 24, 24, 24, 24, 28, 32].map(width => ({ width })), showGridLines: false }, { sheet: "Premissas", data: notes, columns: [{ width: 30 }, { width: 95 }], showGridLines: false }];
 }
-export async function createComparisonExcel(result: ComparisonResult, options: ReportOptions) { return writeExcelFile(comparisonSheets(result, options), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
+export async function createComparisonExcel(result: ComparisonResult, options: ReportOptions) {
+  const { default: writeExcelFile } = await import("write-excel-file/universal"); return writeExcelFile(styleExcelSheets(comparisonSheets(result, options)), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
 
 export function comparisonDetailLines(d: Detail) {
   const lines = [`${d.category} - ${d.item}: A ${formatMoney(d.informedA)} (${periodLabels[d.periodA]}) | B ${formatMoney(d.informedB)} (${periodLabels[d.periodB]})`];
@@ -42,6 +43,7 @@ export function comparisonDetailLines(d: Detail) {
 }
 
 export async function createComparisonPdf(result: ComparisonResult, options: ReportOptions) {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   doc.setTitle("Comparação de imóveis"); doc.setAuthor(options.brand.name); doc.setCreationDate(options.generatedAt); doc.setLanguage("pt-BR");
   const green = rgb(22 / 255, 75 / 255, 59 / 255);

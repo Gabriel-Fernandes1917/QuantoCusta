@@ -71,9 +71,11 @@ export function RentalComparisonCalculator({ reportBrand }: { reportBrand: Repor
     catch { setNotice("Não foi possível salvar. Seus valores foram mantidos."); }
   }
   function clear() {
+    let removed = true;
     try { localStorage.removeItem(RENTAL_STORAGE_KEY); }
-    catch { setNotice("Não foi possível limpar os dados salvos. Tente novamente."); return; }
-    setValues(emptyRentalComparison()); setDraft({}); setErrors({}); setResult(null); setNotice("Os dados desta ferramenta foram limpos.");
+    catch { removed = false; }
+    setValues(emptyRentalComparison()); setDraft({}); setErrors({}); setResult(null);
+    setNotice(removed ? "Os dados desta ferramenta foram limpos." : "Campos e resultados limpos. Não foi possível remover a cópia salva no navegador; limpe os dados do site nas configurações do navegador.");
   }
   function removeRow(type: "rides" | "extras", index: number) {
     setDraft(previous => Object.fromEntries(Object.entries(previous).flatMap(([path, text]) => {

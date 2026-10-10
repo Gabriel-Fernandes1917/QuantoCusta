@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
+import { styleExcelSheets } from "./excel-style";
+import type { Cell, Row, Sheet } from "write-excel-file/universal";
 import { appLabels, ownershipLabels, vehicleDifferenceText, vehicleLabels, vehicleNotes, type VehicleResult } from "../calculations/vehicle-comparison";
 import { formatVehicleHours } from "../vehicle-presentation";
 import { formatMoney } from "../money";
@@ -25,8 +25,10 @@ export function vehicleSheets(result: VehicleResult, options: ReportOptions): Sh
   const notes: Row[] = [[header("Premissas"), header("Conteúdo")], ...vehicleNotes.map(note => ["Premissa", { value: note, wrap: true, height: 64 }]), ["Planilha editável", { value: "Valores numéricos sem fórmulas vinculadas: editar as células não recalcula os totais. Células vazias indicam valor não informado ou não aplicável.", wrap: true, height: 64 }], ["Créditos", reportFooter(options.brand)]];
   return [{ sheet: "Resumo", data: summary, columns: [{ width: 48 }, { width: 85 }] }, { sheet: "Veículo", data: costs, columns: [28, 18, 30, 24, 24, 24, 24].map(width => ({ width })) }, { sheet: "Aplicativo", data: app, columns: [{ width: 40 }, { width: 32 }] }, { sheet: "Premissas", data: notes, columns: [{ width: 28 }, { width: 100 }] }].map(sheet => ({ ...sheet, showGridLines: false }));
 }
-export async function createVehicleExcel(result: VehicleResult, options: ReportOptions) { return writeExcelFile(vehicleSheets(result, options), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
+export async function createVehicleExcel(result: VehicleResult, options: ReportOptions) {
+  const { default: writeExcelFile } = await import("write-excel-file/universal"); return writeExcelFile(styleExcelSheets(vehicleSheets(result, options)), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
 export async function createVehiclePdf(result: VehicleResult, options: ReportOptions) {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   doc.setTitle("Veículo próprio ou aplicativo?"); doc.setAuthor(options.brand.name); doc.setCreationDate(options.generatedAt); doc.setLanguage("pt-BR");
   const green = rgb(22 / 255, 75 / 255, 59 / 255);

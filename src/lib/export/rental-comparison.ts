@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
+import { styleExcelSheets } from "./excel-style";
+import type { Cell, Row, Sheet } from "write-excel-file/universal";
 import { additionalLabels, beyondRentalText, formatDuration, formatQuantity, fuelModeLabels, includedLabels, rentalDifferenceText, rentalNotes, rentalPriceLabels, rentalWaitText, rideKindLabels, vehicleLabels, type RentalResult } from "../calculations/rental-comparison";
 import { formatMoney, formatPercentage } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
@@ -50,9 +50,11 @@ export function rentalSheets(r: RentalResult, options: ReportOptions): Sheet<Blo
   ].map(sheet => ({ ...sheet, showGridLines: false }));
 }
 export async function createRentalExcel(r: RentalResult, options: ReportOptions) {
-  return writeExcelFile(rentalSheets(r, options), { fontFamily: "Arial", fontSize: 11 }).toBlob();
+  const { default: writeExcelFile } = await import("write-excel-file/universal");
+  return writeExcelFile(styleExcelSheets(rentalSheets(r, options)), { fontFamily: "Arial", fontSize: 11 }).toBlob();
 }
 export async function createRentalPdf(r: RentalResult, options: ReportOptions) {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   doc.setTitle("Veículo alugado ou aplicativo?"); doc.setAuthor(options.brand.name); doc.setCreationDate(options.generatedAt); doc.setLanguage("pt-BR");
   const green = rgb(22 / 255, 75 / 255, 59 / 255);

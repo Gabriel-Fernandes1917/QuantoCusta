@@ -20,6 +20,23 @@ export type TripCategory = typeof tripCategories[number]["id"];
 export type TripItem = { id: string; name: string; category: TripCategory; amount: number | null; mode: "total" | "person" | "night" | "personDay" | "unit"; quantity: number; days: number };
 export type TripScenario = { id: string; name: string; days: number; nights: number; people: number; budget: number | null; items: TripItem[]; reserve: { mode: "none" | "fixed" | "percent"; amount: number | null; percent: number | null } };
 export type TripPlan = { mode: "single" | "compare"; scenarios: TripScenario[] };
+export function tripDestinationName(scenario: { name: string }, index: number): string {
+  return scenario.name.trim() || `Destino ${index + 1}`;
+}
+export function tripItemModeLabel(item: Pick<TripItem, "category" | "mode">): string {
+  if (item.category === "activities") return item.mode === "person" ? "Valor por pessoa por ocorrência" : "Valor por ocorrência";
+  return { total: "Valor total", person: "Valor por pessoa", night: "Valor por diária/noite", personDay: "Valor por pessoa por dia", unit: "Quantidade × valor unitário" }[item.mode];
+}
+export class TripFieldError extends Error {
+  constructor(message: string, readonly scenarioId: string, readonly fieldId: string) { super(message); this.name = "TripFieldError"; }
+}
+export function readTripField<T>(scenario: { id: string; name: string }, index: number, fieldId: string, read: () => T, itemName?: string): T {
+  try { return read(); }
+  catch (error) {
+    if (error instanceof TripFieldError) throw error;
+    throw new TripFieldError(`${tripDestinationName(scenario, index)}${itemName ? `: ${itemName}` : ""}: ${(error as Error).message}`, scenario.id, fieldId);
+  }
+}
 export const tripNotes = [
   "Este total considera somente as despesas preenchidas. Alimentação, transporte e outros gastos podem alterar o custo final. Zero informado é diferente de um campo não preenchido.",
   "Os valores são fornecidos pelo usuário. Não há preços automáticos, integração com companhias aéreas, hotéis ou plataformas de transporte, nem médias de mercado.",
@@ -30,40 +47,44 @@ export const tripNotes = [
   "Os resultados são estimativas informativas, sem garantia do custo final ou recomendação financeira.",
 ];
 const modes: Record<TripCategory, TripItem["mode"][]> = { tickets: ["total", "person"], lodging: ["total", "night"], food: ["total", "personDay"], transport: ["total", "unit"], activities: ["total", "person"], shopping: ["total"], other: ["total", "unit"] };
-function integer(value: number, label: string, min = 0, max = 10_000) { if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(`${label}: informe um número inteiro entre ${min} e ${max}.`); }
+export function validateTripCount(value: number, label: string, min = 0, max = 10_000) { if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(`${label}: informe um número inteiro entre ${min} e ${max}.`); }
 function safe(value: bigint): number { if (value < BigInt(0) || value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("O total ultrapassa o limite seguro. Reduza os valores ou quantidades."); return Number(value); }
 function sum(values: number[]) { return safe(values.reduce((total, n) => total + BigInt(n), BigInt(0))); }
 function roundedDivide(value: bigint, divisor: bigint) { return safe((value * BigInt(2) + divisor) / (divisor * BigInt(2))); }
 
-export function validateTripPlan(plan: TripPlan): void {
+export function validateTripPlan(plan: TripPlan, purpose: "storage" | "calculation" = "storage"): void {
   if (!plan || !["single", "compare"].includes(plan.mode) || !Array.isArray(plan.scenarios) || plan.scenarios.length < 1 || plan.scenarios.length > 4 || (plan.mode === "compare" && plan.scenarios.length < 2)) throw new Error("Informe de um a quatro destinos; a comparação precisa de pelo menos dois.");
   const ids = new Set<string>();
-  for (const s of plan.scenarios) {
+  const applicable = purpose === "calculation" && plan.mode === "single" ? plan.scenarios.slice(0, 1) : plan.scenarios;
+  for (const [index, s] of applicable.entries()) {
     if (!s || typeof s.id !== "string" || !s.id || ids.has(s.id) || typeof s.name !== "string" || s.name.length > 100) throw new Error("Destino inválido.");
     ids.add(s.id);
-    integer(s.days, "Dias", 1); integer(s.nights, "Noites"); integer(s.people, "Viajantes", 1);
-    if (s.budget !== null) assertMoney(s.budget);
+    const check = <T>(suffix: string, read: () => T) => readTripField(s, index, `${s.id}-${suffix}`, read);
+    check("days", () => validateTripCount(s.days, "Dias", 1)); check("nights", () => validateTripCount(s.nights, "Noites")); check("people", () => validateTripCount(s.people, "Viajantes", 1));
+    if (s.budget !== null) check("budget", () => assertMoney(s.budget!));
     if (!Array.isArray(s.items) || s.items.length > 200) throw new Error("Informe até 200 despesas por destino.");
     const itemIds = new Set<string>();
     for (const item of s.items) {
       if (!item || typeof item.id !== "string" || !item.id || itemIds.has(item.id) || typeof item.name !== "string" || item.name.length > 100 || !modes[item.category]?.includes(item.mode)) throw new Error("Despesa inválida.");
       itemIds.add(item.id);
-      if (item.amount !== null) assertMoney(item.amount);
-      integer(item.quantity, "Quantidade", 1); integer(item.days, "Dias da refeição");
-      if (item.mode === "personDay" && item.days > s.days) throw new Error("Os dias de uma refeição não podem superar a duração da viagem.");
+      const checkItem = <T>(suffix: string, read: () => T) => readTripField(s, index, `${item.id}-${suffix}`, read, item.name.trim() || "Despesa");
+      if (item.amount !== null) checkItem("amount", () => assertMoney(item.amount!));
+      checkItem("quantity", () => validateTripCount(item.quantity, "Quantidade", 1)); checkItem("days", () => validateTripCount(item.days, "Dias da refeição"));
+      if (item.mode === "personDay" && item.days > s.days) checkItem("days", () => { throw new Error("Os dias de uma refeição não podem superar a duração da viagem."); });
     }
     if (!s.reserve || !["none", "fixed", "percent"].includes(s.reserve.mode)) throw new Error("Reserva inválida.");
-    if (s.reserve.amount !== null) assertMoney(s.reserve.amount);
-    if (s.reserve.percent !== null && (!Number.isFinite(s.reserve.percent) || s.reserve.percent < 0 || s.reserve.percent > 100 || Math.abs(s.reserve.percent * 100 - Math.round(s.reserve.percent * 100)) > 1e-7)) throw new Error("Informe um percentual de 0 a 100, com até duas casas decimais.");
-    if (s.reserve.mode === "fixed" && s.reserve.amount === null) throw new Error("Informe o valor da reserva fixa, inclusive zero se desejar.");
-    if (s.reserve.mode === "percent" && s.reserve.percent === null) throw new Error("Informe o percentual da reserva.");
+    if (s.reserve.amount !== null) check("reserve-amount", () => assertMoney(s.reserve.amount!));
+    if (s.reserve.percent !== null && (!Number.isFinite(s.reserve.percent) || s.reserve.percent < 0 || s.reserve.percent > 100 || Math.abs(s.reserve.percent * 100 - Math.round(s.reserve.percent * 100)) > 1e-7)) check("reserve-percent", () => { throw new Error("Informe um percentual de 0 a 100, com até duas casas decimais."); });
+    if (s.reserve.mode === "fixed" && s.reserve.amount === null) check("reserve-amount", () => { throw new Error("Informe o valor da reserva fixa, inclusive zero se desejar."); });
+    if (s.reserve.mode === "percent" && s.reserve.percent === null) check("reserve-percent", () => { throw new Error("Informe o percentual da reserva."); });
   }
 }
 
 export function calculateTrip(plan: TripPlan) {
-  validateTripPlan(plan);
-  const active = plan.mode === "single" ? plan.scenarios.slice(0, 1) : plan.scenarios;
-  const scenarios = active.map(s => {
+  validateTripPlan(plan, "calculation");
+  const applicable = plan.mode === "single" ? { ...plan, scenarios: plan.scenarios.slice(0, 1) } : plan;
+  const active = applicable.scenarios;
+  const scenarios = active.map((s, index) => {
     const details = s.items.map(item => {
       let factor = BigInt(1);
       if (item.mode === "person") factor = BigInt(s.people) * BigInt(item.category === "activities" ? item.quantity : 1);
@@ -82,18 +103,18 @@ export function calculateTrip(plan: TripPlan) {
     const reserve = s.reserve.mode === "none" ? 0 : s.reserve.mode === "fixed" ? s.reserve.amount! : roundedDivide(BigInt(subtotal) * BigInt(Math.round(s.reserve.percent! * 100)), BigInt(10_000));
     const total = sum([subtotal, reserve]);
     const positive = categories.filter(c => c.total > 0).sort((a,b) => b.total - a.total);
-    return { id: s.id, name: s.name.trim() || "Destino sem nome", days: s.days, nights: s.nights, people: s.people, details, categories, subtotal, reserve, total, perPerson: roundedDivide(BigInt(total), BigInt(s.people)), perDay: roundedDivide(BigInt(total), BigInt(s.days)), budget: s.budget, budgetRemaining: s.budget === null ? null : s.budget - total, budgetPercentage: s.budget === null ? null : percentage(total, s.budget), reservePercentage: percentage(reserve, total), largest: positive[0] ?? null, smallest: positive.at(-1) ?? null, missing: categories.filter(c => !c.considered).map(c => c.label) };
+    return { id: s.id, name: tripDestinationName(s, index), days: s.days, nights: s.nights, people: s.people, details, categories, subtotal, reserve, total, perPerson: roundedDivide(BigInt(total), BigInt(s.people)), perDay: roundedDivide(BigInt(total), BigInt(s.days)), budget: s.budget, budgetRemaining: s.budget === null ? null : s.budget - total, budgetPercentage: s.budget === null ? null : percentage(total, s.budget), reservePercentage: percentage(reserve, total), largest: positive[0] ?? null, smallest: positive.at(-1) ?? null, missing: categories.filter(c => !c.considered).map(c => c.label) };
   });
   const differentGroups = scenarios.some(s => s.days !== scenarios[0].days || s.people !== scenarios[0].people);
   const differences = scenarios.length === 2 ? { total: scenarios[0].total - scenarios[1].total, perPerson: scenarios[0].perPerson - scenarios[1].perPerson, perDay: scenarios[0].perDay - scenarios[1].perDay, categories: tripCategories.map((c,i) => ({ ...c, delta: scenarios[0].categories[i].considered && scenarios[1].categories[i].considered ? scenarios[0].categories[i].total - scenarios[1].categories[i].total : null })) } : null;
   const unitDifferences = tripPresets.flatMap(([category, labels]) => labels.flatMap((name, index) => {
-    const matches = active.flatMap(s => {
+    const matches = active.flatMap((s, destinationIndex) => {
       const item = s.items.find(i => i.id === `${s.id}-${category}-${index}` && i.category === category && i.name.trim() === name && i.amount !== null);
-      return item ? [{ destination: s.name.trim() || "Destino sem nome", mode: item.mode }] : [];
+      return item ? [{ destination: tripDestinationName(s, destinationIndex), mode: item.mode }] : [];
     });
     return new Set(matches.map(i => i.mode)).size > 1 ? [{ name, matches }] : [];
   }));
-  return { unitDifferences, input: plan, scenarios, differentGroups, differences, lowest: Math.min(...scenarios.map(s => s.total)), highest: Math.max(...scenarios.map(s => s.total)) };
+  return { unitDifferences, input: applicable, scenarios, differentGroups, differences, lowest: Math.min(...scenarios.map(s => s.total)), highest: Math.max(...scenarios.map(s => s.total)) };
 }
 export type TripResult = ReturnType<typeof calculateTrip>;
 export type TripScenarioResult = TripResult["scenarios"][number];

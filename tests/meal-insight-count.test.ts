@@ -10,7 +10,7 @@ function routine(count = 1, home = 1000, outside = 2000) {
   });
   return values;
 }
-const options = { brand: { name: "QuantoCusta", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
+const options = { brand: { name: "Coyler", domain: "" }, generatedAt: new Date("2026-10-03T12:00:00Z") };
 const ranking = /refeição que mais pesa|refeições que mais pesam|Maior diferença|Menor diferença|representa/;
 
 describe("insights conforme a quantidade efetiva de refeições", () => {

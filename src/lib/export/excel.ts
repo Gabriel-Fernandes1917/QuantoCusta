@@ -1,3 +1,4 @@
+import { styleExcelSheets } from "./excel-style";
 import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
 import type { CostOfLivingResult } from "../calculations/cost-of-living";
 import { reportDate, reportFooter, reportNotes, REPORT_TITLE, summaryItems, type ReportOptions } from "./report";
@@ -37,5 +38,5 @@ export function planningSheets(result: CostOfLivingResult, options: ReportOption
 }
 
 export async function createPlanningExcel(result: CostOfLivingResult, options: ReportOptions): Promise<Blob> {
-  return writeExcelFile(planningSheets(result, options), { fontFamily: "Arial", fontSize: 11 }).toBlob();
+  return writeExcelFile(styleExcelSheets(planningSheets(result, options)), { fontFamily: "Arial", fontSize: 11 }).toBlob();
 }

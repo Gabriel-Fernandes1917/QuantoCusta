@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MoneyInput } from "@/components/money-input";
 import { ExportTrip } from "@/components/export-trip";
-import { differentUnitsNote, tripFinancialDifferences, calculateTrip, tripCategories, tripInsights, tripComparisonInsights, tripNotes, type TripCategory, type TripItem, type TripResult } from "@/lib/calculations/trip-cost";
+import { differentUnitsNote, tripFinancialDifferences, calculateTrip, tripCategories, tripInsights, tripComparisonInsights, tripNotes, tripDestinationName, tripItemModeLabel, TripFieldError, type TripCategory, type TripItem, type TripResult } from "@/lib/calculations/trip-cost";
 import { newTripScenario, newTripItem, parseTripDraft, tripToDraft, type TripDraft, type TripDraftScenario, type TripDraftItem } from "@/lib/trip-form";
 import { decodeTripPlan, encodeTripPlan, TRIP_STORAGE_KEY } from "@/lib/trip-storage";
-import { formatMoney, formatPercentage } from "@/lib/money";
+import { formatMoney, formatPercentage, parseMoney } from "@/lib/money";
 import type { ReportBrand } from "@/lib/export/report";
 
 import { quantityText } from "@/lib/quantity-text";
@@ -19,15 +19,17 @@ function itemModes(category: TripCategory): TripItem["mode"][] {
   if (category === "transport" || category === "other") return ["total", "unit"];
   return ["total"];
 }
-function CountField({ id, label, value, onChange, min = 0, max = 10_000 }: { id: string; label: string; value: string; onChange: (value: string) => void; min?: number; max?: number }) {
-  return <div className="plain-field"><label htmlFor={id}>{label}</label><input id={id} type="number" min={min} max={max} step="1" inputMode="numeric" value={value} onChange={e => onChange(e.target.value)} /></div>;
+function CountField({ id, label, value, onChange, error, min = 0, max = 10_000 }: { id: string; label: string; value: string; onChange: (value: string) => void; error?: string; min?: number; max?: number }) {
+  return <div className="plain-field"><label htmlFor={id}>{label}</label><input id={id} type="number" min={min} max={max} step="1" inputMode="numeric" value={value} onChange={e => onChange(e.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />{error && <p id={`${id}-error`} className="field-error">{error}</p>}</div>;
 }
 export function TripCostCalculator({ reportBrand }: { reportBrand: ReportBrand }) {
   const [draft, setDraft] = useState<TripDraft>({ mode: "single", scenarios: [newTripScenario("destination-1")] });
   const [active, setActive] = useState(0), [result, setResult] = useState<TripResult | null>(null), [notice, setNotice] = useState(""), [error, setError] = useState("");
+  const [fieldError, setFieldError] = useState<TripFieldError | null>(null);
   const resultRef = useRef<HTMLElement>(null);
   const destinationTitleRef = useRef<HTMLHeadingElement>(null);
   const focusDestination = useRef(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     // Restaura o armazenamento externo após a hidratação, como nas outras ferramentas.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -46,34 +48,73 @@ export function TripCostCalculator({ reportBrand }: { reportBrand: ReportBrand }
     });
     return () => cancelAnimationFrame(frame);
   }, [active, s.id]);
+  useEffect(() => {
+    if (!fieldError || fieldError.scenarioId !== s.id) return;
+    const frame = requestAnimationFrame(() => {
+      const input = document.getElementById(fieldError.fieldId);
+      let parent = input?.parentElement;
+      while (parent) { if (parent instanceof HTMLDetailsElement) parent.open = true; parent = parent.parentElement; }
+      input?.focus({ preventScroll: true });
+      input?.scrollIntoView({ block: "nearest", behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [fieldError, s.id]);
   const liveTotal = useMemo(() => {
     try { return calculateTrip(parseTripDraft({ mode: "single", scenarios: [s] })).scenarios[0].total; }
     catch { return null; }
   }, [s]);
-  function change(next: TripDraft) { setDraft(next); setResult(null); setError(""); setNotice(""); }
-  function update(patch: Partial<TripDraftScenario>) { change({ ...draft, scenarios: draft.scenarios.map((v,i) => i === active ? { ...v, ...patch } : v) }); }
-  function updateItem(id: string, patch: Partial<TripDraftItem>) { update({ items: s.items.map(i => i.id === id ? { ...i, ...patch } : i) }); }
+  function change(next: TripDraft, formattingOnly = false) { setDraft(next); if (!formattingOnly) setResult(null); setError(""); setFieldError(null); setNotice(""); }
+  function fieldMessage(id: string) { return fieldError?.fieldId === id ? fieldError.message : undefined; }
+  function sameMoney(a: string, b: string) {
+    try { return (a.trim() ? parseMoney(a) : null) === (b.trim() ? parseMoney(b) : null); } catch { return false; }
+  }
+  function update(patch: Partial<TripDraftScenario>, formattingOnly = false) {
+    if (Object.entries(patch).every(([key, value]) => s[key as keyof TripDraftScenario] === value)) return;
+    if (Object.keys(patch).length === 1 && patch.budget !== undefined) formattingOnly = sameMoney(s.budget, patch.budget);
+    if (patch.reserve && patch.reserve.mode === s.reserve.mode && patch.reserve.percent === s.reserve.percent) formattingOnly = sameMoney(s.reserve.amount, patch.reserve.amount);
+    change({ ...draft, scenarios: draft.scenarios.map((v,i) => i === active ? { ...v, ...patch } : v) }, formattingOnly);
+  }
+  function updateItem(id: string, patch: Partial<TripDraftItem>) {
+    const current = s.items.find(i => i.id === id)!;
+    if (Object.entries(patch).every(([key, value]) => current[key as keyof TripDraftItem] === value)) return;
+    update({ items: s.items.map(i => i.id === id ? { ...i, ...patch } : i) }, Object.keys(patch).length === 1 && patch.amount !== undefined && sameMoney(current.amount, patch.amount));
+  }
   function selectDestination(index: number) {
     if (index === active) return;
     focusDestination.current = true;
-    setActive(index); setError("");
+    setActive(index); setError(""); setFieldError(null);
   }
   function addDestination() {
     if (draft.scenarios.length >= 4) return;
     change({ ...draft, scenarios: [...draft.scenarios, newTripScenario(undefined, `Destino ${draft.scenarios.length+1}`)] });
     selectDestination(draft.scenarios.length);
   }
-  function destinationName(index: number) { return draft.scenarios[index].name.trim() || `Destino ${index+1}`; }
+  function destinationName(index: number) { return tripDestinationName(draft.scenarios[index], index); }
   function switchMode(mode: TripDraft["mode"]) {
     setActive(0); change({ ...draft, mode, scenarios: mode === "compare" && draft.scenarios.length < 2 ? [...draft.scenarios, newTripScenario(undefined, "Destino 2")] : draft.scenarios });
   }
   function calculate() {
-    try { setResult(calculateTrip(parseTripDraft(draft))); setError(""); requestAnimationFrame(() => resultRef.current?.focus()); }
-    catch (e) { setError((e as Error).message); setResult(null); }
+    try { setResult(calculateTrip(parseTripDraft(draft))); setError(""); setFieldError(null); requestAnimationFrame(() => resultRef.current?.focus()); }
+    catch (e) { showError(e); }
+  }
+  function showError(error: unknown) {
+    setError((error as Error).message); setResult(null);
+    if (error instanceof TripFieldError) {
+      focusDestination.current = false;
+      const index = draft.scenarios.findIndex(s => s.id === error.scenarioId);
+      if (index >= 0) {
+        if (index > 0 && draft.mode === "single") setDraft(previous => ({ ...previous, mode: "compare" }));
+        setActive(index);
+      }
+      setFieldError(error);
+    } else { setFieldError(null); requestAnimationFrame(() => errorRef.current?.focus()); }
   }
   function save() {
-    try { localStorage.setItem(TRIP_STORAGE_KEY, encodeTripPlan(parseTripDraft(draft))); setNotice("Simulação salva somente neste navegador. Novas alterações precisam ser salvas novamente."); setError(""); }
-    catch (e) { setNotice(`Não foi possível salvar. ${(e as Error).message}`); }
+    try { localStorage.setItem(TRIP_STORAGE_KEY, encodeTripPlan(parseTripDraft(draft, "storage"))); setNotice("Simulação salva somente neste navegador. Novas alterações precisam ser salvas novamente."); setError(""); setFieldError(null); }
+    catch (e) {
+      setNotice(`Não foi possível salvar. ${(e as Error).message}${e instanceof TripFieldError ? " Complete os destinos para salvar todos sem descartar rascunhos." : ""}`);
+      if (e instanceof TripFieldError) showError(e);
+    }
   }
   function clear() {
     change({ mode: "single", scenarios: [newTripScenario("destination-1")] }); setActive(0);
@@ -85,32 +126,32 @@ export function TripCostCalculator({ reportBrand }: { reportBrand: ReportBrand }
     {draft.mode === "compare" && <div className="trip-destinations"><h2>Preencha os gastos de cada destino</h2><p className="field-hint">Selecione um destino para informar ou editar seus gastos. Todos os destinos adicionados serão considerados na comparação.</p><div role="tablist" aria-label="Destinos">{draft.scenarios.map((v,i) => <button className="secondary-button" type="button" key={v.id} id={`tab-${v.id}`} role="tab" aria-selected={active === i} aria-controls="trip-editor" tabIndex={active === i ? 0 : -1} onKeyDown={e => {
       const count = draft.scenarios.length;
       const next = e.key === "ArrowRight" ? (i+1)%count : e.key === "ArrowLeft" ? (i+count-1)%count : e.key === "Home" ? 0 : e.key === "End" ? count-1 : null;
-      if (next !== null) { e.preventDefault(); setActive(next); setError(""); document.getElementById(`tab-${draft.scenarios[next].id}`)?.focus(); }
-    }} onClick={() => selectDestination(i)}>{v.name.trim() || `Destino ${i+1}`}</button>)}</div>{draft.scenarios.length < 4 && <button className="secondary-button" type="button" onClick={addDestination}>Adicionar destino</button>}</div>}
+      if (next !== null) { e.preventDefault(); setActive(next); setError(""); setFieldError(null); document.getElementById(`tab-${draft.scenarios[next].id}`)?.focus(); }
+    }} onClick={() => selectDestination(i)}>{tripDestinationName(v, i)}</button>)}</div>{draft.scenarios.length < 4 && <button className="secondary-button" type="button" onClick={addDestination}>Adicionar destino</button>}</div>}
     <div id="trip-editor" role={draft.mode === "compare" ? "tabpanel" : undefined} aria-labelledby={draft.mode === "compare" ? `tab-${s.id}` : undefined} tabIndex={draft.mode === "compare" ? 0 : undefined}>
     <form onSubmit={e => { e.preventDefault(); calculate(); }} noValidate>
-      <section className="trip-general" aria-labelledby="trip-general-title"><div className="trip-scenario-heading"><h2 id="trip-general-title" ref={destinationTitleRef} tabIndex={-1}>{s.name.trim() || `Destino ${active+1}`}</h2>{draft.mode === "compare" && draft.scenarios.length > 2 && <button type="button" className="text-link" onClick={() => { change({ ...draft, scenarios: draft.scenarios.filter((_,i) => i !== active) }); setActive(0); }}>Remover este destino</button>}</div>
-        <div className="money-grid"><div className="plain-field"><label htmlFor={`${s.id}-name`}>Nome do destino</label><input id={`${s.id}-name`} maxLength={100} value={s.name} onChange={e => update({ name: e.target.value })} /></div><CountField id={`${s.id}-days`} label="Quantidade de dias" min={1} value={s.days} onChange={days => update({ days, items: s.items.map(i => i.category === "food" && i.days === s.days ? { ...i, days } : i) })} /><CountField id={`${s.id}-nights`} label="Quantidade de noites" value={s.nights} onChange={nights => update({ nights })} /><CountField id={`${s.id}-people`} label="Número de viajantes" min={1} value={s.people} onChange={people => update({ people })} /><MoneyInput id={`${s.id}-budget`} label="Orçamento disponível (opcional)" hint="Referência para comparar com o total planejado; não é uma despesa." value={s.budget} onChange={budget => update({ budget })} /></div>
+      <section className="trip-general" aria-labelledby="trip-general-title"><div className="trip-scenario-heading"><h2 id="trip-general-title" ref={destinationTitleRef} tabIndex={-1}>{destinationName(active)}</h2>{draft.mode === "compare" && draft.scenarios.length > 2 && <button type="button" className="text-link" onClick={() => { change({ ...draft, scenarios: draft.scenarios.filter((_,i) => i !== active) }); setActive(0); }}>Remover este destino</button>}</div>
+        <div className="money-grid"><div className="plain-field"><label htmlFor={`${s.id}-name`}>Nome do destino</label><input id={`${s.id}-name`} maxLength={100} value={s.name} onChange={e => update({ name: e.target.value })} /></div><CountField id={`${s.id}-days`} label="Quantidade de dias" min={1} error={fieldMessage(`${s.id}-days`)} value={s.days} onChange={days => update({ days, items: s.items.map(i => i.category === "food" && i.days === s.days ? { ...i, days } : i) })} /><CountField id={`${s.id}-nights`} label="Quantidade de noites" error={fieldMessage(`${s.id}-nights`)} value={s.nights} onChange={nights => update({ nights })} /><CountField id={`${s.id}-people`} label="Número de viajantes" min={1} error={fieldMessage(`${s.id}-people`)} value={s.people} onChange={people => update({ people })} /><MoneyInput id={`${s.id}-budget`} label="Orçamento disponível (opcional)" hint="Referência para comparar com o total planejado; não é uma despesa." error={fieldMessage(`${s.id}-budget`)} value={s.budget} onChange={budget => update({ budget })} /></div>
         <p className="field-hint">Dias e noites são independentes. Valores em branco não são considerados; informe 0 quando souber que não haverá aquele gasto.</p>
       </section>
-      <p className="trip-live-total" role="status">Total planejado de {s.name.trim() || `Destino ${active+1}`}: <strong>{liveTotal === null ? "Confira os campos para atualizar o total" : formatMoney(liveTotal)}</strong></p>
+      <p className="trip-live-total" role="status">Total planejado de {destinationName(active)}: <strong>{liveTotal === null ? "Confira os campos para atualizar o total" : formatMoney(liveTotal)}</strong></p>
       {tripCategories.map(category => <details className="expense-section" key={`${s.id}-${category.id}`}><summary><h3>{category.label}</h3><span>{quantityText(s.items.filter(i => i.category === category.id && i.amount.trim()).length, "valor preenchido", "valores preenchidos")}</span><span className="section-chevron" aria-hidden="true">+</span></summary><div className="section-body">
         {category.id === "tickets" && <p className="section-note">Inclua ida e volta conforme seu roteiro, por pessoa ou para todos os viajantes. Pode ser passagem aérea, rodoviária ou outro meio.</p>}
         {category.id === "lodging" && <p className="section-note">Considere café da manhã e serviços incluídos. Registre taxas somente se estiverem fora do preço informado, para evitar dupla contagem.</p>}
         {category.id === "food" && <p className="section-note">No valor diário, ajuste quantos dias a refeição será paga. Não registre novamente refeições já incluídas na hospedagem.</p>}
-        {category.id === "transport" && <p className="section-note">Se você já comparou veículo alugado e aplicativo em outra ferramenta do QuantoCusta, pode utilizar aqui o total estimado da alternativa que pretende considerar. A transferência é manual; evite somar novamente despesas incluídas nesse total. <a className="text-link" href="/veiculo-alugado-ou-aplicativo/" target="_blank" rel="noopener noreferrer">Comparar alternativas →</a></p>}
+        {category.id === "transport" && <p className="section-note">Se você já comparou veículo alugado e aplicativo em outra ferramenta da Coyler, pode utilizar aqui o total estimado da alternativa que pretende considerar. A transferência é manual; evite somar novamente despesas incluídas nesse total. <a className="text-link" href="/veiculo-alugado-ou-aplicativo/" target="_blank" rel="noopener noreferrer">Comparar alternativas →</a></p>}
         {category.id === "other" && <p className="section-note">Use para documentação, seguro-viagem, taxas e serviços adicionais. Registre cada despesa em apenas uma categoria.</p>}
-        {s.items.filter(i => i.category === category.id).map(item => <details className="trip-item" key={item.id}><summary>{item.name.trim() || "Nova despesa"}<span>{item.amount.trim() ? `R$ ${item.amount}` : "Não informado"}</span></summary><div className="trip-item-body"><div className="plain-field"><label htmlFor={`${item.id}-name`}>{category.id === "activities" ? "Nome do passeio" : "Nome da despesa"}</label><input id={`${item.id}-name`} maxLength={100} value={item.name} onChange={e => updateItem(item.id, { name: e.target.value })} /></div><div className="money-grid"><MoneyInput id={`${item.id}-amount`} label="Valor" value={item.amount} onChange={amount => updateItem(item.id, { amount })} />{itemModes(category.id).length > 1 && <div className="plain-field"><label htmlFor={`${item.id}-mode`}>Como calcular este valor?</label><select id={`${item.id}-mode`} value={item.mode} onChange={e => updateItem(item.id, { mode: e.target.value as TripItem["mode"] })}>{itemModes(category.id).map(mode => <option key={mode} value={mode}>{modeLabels[mode]}</option>)}</select></div>}{(item.mode === "unit" || category.id === "activities") && <CountField id={`${item.id}-quantity`} label={category.id === "activities" ? "Quantidade de ocorrências" : "Quantidade"} min={1} value={item.quantity} onChange={quantity => updateItem(item.id, { quantity })} />}{item.mode === "personDay" && <CountField id={`${item.id}-days`} label="Dias em que esta refeição será paga" max={Number(s.days) || 10_000} value={item.days} onChange={days => updateItem(item.id, { days })} />}</div><button className="text-link" type="button" onClick={() => update({ items: s.items.filter(i => i.id !== item.id) })}>Remover despesa</button></div></details>)}
+        {s.items.filter(i => i.category === category.id).map(item => <details className="trip-item" key={item.id}><summary>{item.name.trim() || "Nova despesa"}<span>{item.amount.trim() ? `R$ ${item.amount}` : "Não informado"}</span></summary><div className="trip-item-body"><div className="plain-field"><label htmlFor={`${item.id}-name`}>{category.id === "activities" ? "Nome do passeio" : "Nome da despesa"}</label><input id={`${item.id}-name`} maxLength={100} value={item.name} onChange={e => updateItem(item.id, { name: e.target.value })} /></div><div className="money-grid"><MoneyInput id={`${item.id}-amount`} label={category.id === "activities" ? tripItemModeLabel(item) : "Valor"} hint={category.id === "activities" ? item.mode === "person" ? "Informe o valor por pessoa de uma ocorrência. O total considera os viajantes e a quantidade informada." : "Informe o valor de uma ocorrência. O total será calculado conforme a quantidade informada." : undefined} error={fieldMessage(`${item.id}-amount`)} value={item.amount} onChange={amount => updateItem(item.id, { amount })} />{itemModes(category.id).length > 1 && <div className="plain-field"><label htmlFor={`${item.id}-mode`}>Como calcular este valor?</label><select id={`${item.id}-mode`} value={item.mode} onChange={e => updateItem(item.id, { mode: e.target.value as TripItem["mode"] })}>{itemModes(category.id).map(mode => <option key={mode} value={mode}>{tripItemModeLabel({ category: category.id, mode })}</option>)}</select></div>}{(item.mode === "unit" || category.id === "activities") && <CountField id={`${item.id}-quantity`} label={category.id === "activities" ? "Quantidade de ocorrências" : "Quantidade"} min={1} error={fieldMessage(`${item.id}-quantity`)} value={item.quantity} onChange={quantity => updateItem(item.id, { quantity })} />}{item.mode === "personDay" && <CountField id={`${item.id}-days`} label="Dias em que esta refeição será paga" max={Number(s.days) || 10_000} error={fieldMessage(`${item.id}-days`)} value={item.days} onChange={days => updateItem(item.id, { days })} />}</div><button className="text-link" type="button" onClick={() => update({ items: s.items.filter(i => i.id !== item.id) })}>Remover despesa</button></div></details>)}
         {s.items.length < 200 && <button type="button" className="secondary-button" onClick={() => update({ items: [...s.items, { ...newTripItem(category.id, category.id === "activities" ? "Novo passeio" : "Outra despesa"), days: s.days }] })}>{category.id === "activities" ? "Adicionar passeio" : "Adicionar despesa"}</button>}
       </div></details>)}
-      <details className="expense-section"><summary><h3>Reserva para imprevistos</h3><span className="section-chevron" aria-hidden="true">+</span></summary><div className="section-body"><div className="plain-field"><label htmlFor={`${s.id}-reserve-mode`}>Quer reservar um valor para imprevistos?</label><select id={`${s.id}-reserve-mode`} value={s.reserve.mode} onChange={e => update({ reserve: { ...s.reserve, mode: e.target.value as TripDraftScenario["reserve"]["mode"] } })}><option value="none">Não adicionar reserva</option><option value="fixed">Valor fixo</option><option value="percent">Percentual dos gastos estimados</option></select></div>{s.reserve.mode === "fixed" && <MoneyInput id={`${s.id}-reserve-amount`} label="Valor reservado" value={s.reserve.amount} onChange={amount => update({ reserve: { ...s.reserve, amount } })} />}{s.reserve.mode === "percent" && <div className="plain-field"><label htmlFor={`${s.id}-reserve-percent`}>Percentual dos gastos estimados (%)</label><input id={`${s.id}-reserve-percent`} inputMode="decimal" value={s.reserve.percent} onChange={e => update({ reserve: { ...s.reserve, percent: e.target.value } })} /></div>}<p className="field-hint">A reserva não é um gasto confirmado. O percentual é aplicado sobre o subtotal, antes da própria reserva.</p></div></details>
+      <details className="expense-section"><summary><h3>Reserva para imprevistos</h3><span className="section-chevron" aria-hidden="true">+</span></summary><div className="section-body"><div className="plain-field"><label htmlFor={`${s.id}-reserve-mode`}>Quer reservar um valor para imprevistos?</label><select id={`${s.id}-reserve-mode`} value={s.reserve.mode} onChange={e => update({ reserve: { ...s.reserve, mode: e.target.value as TripDraftScenario["reserve"]["mode"] } })}><option value="none">Não adicionar reserva</option><option value="fixed">Valor fixo</option><option value="percent">Percentual dos gastos estimados</option></select></div>{s.reserve.mode === "fixed" && <MoneyInput id={`${s.id}-reserve-amount`} label="Valor reservado" error={fieldMessage(`${s.id}-reserve-amount`)} value={s.reserve.amount} onChange={amount => update({ reserve: { ...s.reserve, amount } })} />}{s.reserve.mode === "percent" && <div className="plain-field"><label htmlFor={`${s.id}-reserve-percent`}>Percentual dos gastos estimados (%)</label><input id={`${s.id}-reserve-percent`} aria-invalid={Boolean(fieldMessage(`${s.id}-reserve-percent`))} aria-describedby={fieldMessage(`${s.id}-reserve-percent`) ? `${s.id}-reserve-percent-error` : undefined} inputMode="decimal" value={s.reserve.percent} onChange={e => update({ reserve: { ...s.reserve, percent: e.target.value } })} />{fieldMessage(`${s.id}-reserve-percent`) && <p id={`${s.id}-reserve-percent-error`} className="field-error">{fieldMessage(`${s.id}-reserve-percent`)}</p>}</div>}<p className="field-hint">A reserva não é um gasto confirmado. O percentual é aplicado sobre o subtotal, antes da própria reserva.</p></div></details>
       {draft.mode === "compare" && <nav className="trip-destination-navigation" aria-label="Navegação entre destinos">
         {active > 0 && <button type="button" className="secondary-button" onClick={() => selectDestination(active-1)}>← {destinationName(active-1)}</button>}
         {active < draft.scenarios.length-1
           ? <button type="button" className="secondary-button" onClick={() => selectDestination(active+1)}>Próximo: {destinationName(active+1)} →</button>
           : draft.scenarios.length < 4 && <button type="button" className="secondary-button" onClick={addDestination}>+ Adicionar destino</button>}
       </nav>}
-      {error && <p className="field-error" role="alert">{error}</p>}
+      {error && <p className="field-error" role="alert" ref={errorRef} tabIndex={-1}>{error}</p>}
       <button type="submit" className="button">{draft.mode === "single" ? "Calcular custo da viagem" : "Comparar destinos"}</button>
     </form>
     </div>
@@ -125,7 +166,7 @@ export function TripCostCalculator({ reportBrand }: { reportBrand: ReportBrand }
       <div className="trip-summary-grid">{result.scenarios.map(s => <article className="scenario-card" key={s.id}><h3>{s.name}</h3>
         <p className="field-hint">Maior categoria: {s.largest ? `${s.largest.label} (${formatMoney(s.largest.total)})` : "nenhum gasto positivo informado"}.</p>
         {s.missing.length > 0 && <p className="field-hint">Categorias não consideradas: {s.missing.join(", ")}.</p>}
-        <details className="trip-composition"><summary>Composição dos gastos e detalhes</summary><h4>Composição dos gastos estimados (sem reserva)</h4>{s.categories.map(c => <div className="trip-category-bar" key={c.id}><div className="distribution-label"><span>{c.label}</span><strong>{c.considered ? `${formatMoney(c.total)}${c.percentage === null ? "" : ` · ${formatPercentage(c.percentage)}`}` : "Não considerado"}</strong></div>{c.considered && <div className="distribution-track"><div style={{width:`${c.percentage ?? 0}%`}} /></div>}</div>)}<h4>Despesas preenchidas</h4>{s.details.filter(i=>i.total!==null).map(i=><p className="field-hint" key={i.id}>{i.name.trim() || "Despesa sem nome"}: {formatMoney(i.amount!)} · {modeLabels[i.mode]}{i.mode === "personDay" ? ` · ${quantityText(i.days, "dia", "dias")}` : i.mode === "unit" || i.category === "activities" ? ` · ${quantityText(i.quantity, "ocorrência", "ocorrências")}` : ""} → {formatMoney(i.total!)}</p>)}</details>
+        <details className="trip-composition"><summary>Composição dos gastos e detalhes</summary><h4>Composição dos gastos estimados (sem reserva)</h4>{s.categories.map(c => <div className="trip-category-bar" key={c.id}><div className="distribution-label"><span>{c.label}</span><strong>{c.considered ? `${formatMoney(c.total)}${c.percentage === null ? "" : ` · ${formatPercentage(c.percentage)}`}` : "Não considerado"}</strong></div>{c.considered && <div className="distribution-track"><div style={{width:`${c.percentage ?? 0}%`}} /></div>}</div>)}<h4>Despesas preenchidas</h4>{s.details.filter(i=>i.total!==null).map(i=><p className="field-hint" key={i.id}>{i.name.trim() || "Despesa sem nome"}: {formatMoney(i.amount!)} · {tripItemModeLabel(i)}{i.mode === "personDay" ? ` · ${quantityText(i.days, "dia", "dias")}` : i.mode === "unit" || i.category === "activities" ? ` · ${quantityText(i.quantity, "ocorrência", "ocorrências")}` : ""} → {formatMoney(i.total!)}</p>)}</details>
         <h4 className="trip-insights-title">O que mais pesa na sua viagem?</h4>{tripInsights(s).map(note=><p className="trip-insight" key={note}>{note}</p>)}
       </article>)}</div>
       {result.scenarios.length > 1 && <section className="trip-differences"><h3>Onde estão as maiores diferenças?</h3><div className="trip-category-comparison" role="table" aria-label="Comparação por categoria"><div className="trip-category-row trip-category-header" role="row" style={{"--destinations":result.scenarios.length} as React.CSSProperties}><strong role="columnheader">Categoria</strong>{result.scenarios.map(s=><strong key={s.id} role="columnheader">{s.name}</strong>)}</div>{tripCategories.map((c,i)=><div className="trip-category-row" role="row" key={c.id} style={{"--destinations":result.scenarios.length} as React.CSSProperties}><strong role="rowheader">{c.label}</strong>{result.scenarios.map(s=><span role="cell" key={s.id}><span className="trip-mobile-label">{s.name}: </span>{s.categories[i].considered ? formatMoney(s.categories[i].total) : "Não considerado"}</span>)}{result.differences && <p className="field-hint trip-category-delta">{result.differences.categories[i].delta === null ? "Faltam valores para comparar esta categoria." : `Diferença: ${formatMoney(Math.abs(result.differences.categories[i].delta!))}.`}</p>}</div>)}</div></section>}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#fffdf7"/>
+  <rect x="38" y="38" width="1124" height="554" rx="26" fill="#f2f4eb" stroke="#dce3d5" stroke-width="2"/>
+  <rect x="80" y="80" width="60" height="60" rx="17" fill="#164b3b"/>
+  <path d="M122 97a17 17 0 1 0 0 26" fill="none" stroke="#fffdf7" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="124" cy="110" r="4" fill="#d8eb92"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="158" y="124" font-size="44" font-weight="700" letter-spacing="-2" fill="#164b3b">coyler.</text>
+    <text x="80" y="248" font-size="55" font-weight="700" letter-spacing="-2" fill="#203b33">O menor preço nem sempre</text>
+    <text x="80" y="315" font-size="55" font-weight="700" letter-spacing="-2" fill="#537a3b">é o menor custo.</text>
+    <text x="80" y="390" font-size="24" fill="#53665e">Compare moradia, alimentação, transporte e viagens.</text>
+    <text x="80" y="425" font-size="24" fill="#53665e">Ferramentas gratuitas. Os seus valores, no seu navegador.</text>
+    <rect x="80" y="478" width="332" height="56" rx="12" fill="#164b3b"/>
+    <text x="103" y="515" font-size="25" font-weight="700" fill="#fffdf7">coyler.com.br</text>
+  </g>
+  <circle cx="1020" cy="450" r="70" fill="#d8eb92"/>
+  <path d="M988 451l24 24 47-51" fill="none" stroke="#164b3b" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

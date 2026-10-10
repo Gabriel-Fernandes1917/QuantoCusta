@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import writeExcelFile, { type Cell, type Row, type Sheet } from "write-excel-file/universal";
+import { styleExcelSheets } from "./excel-style";
+import type { Cell, Row, Sheet } from "write-excel-file/universal";
 import { ingredientDetailText, mealTimeDifferenceText, mealInsights, mealNotes, quantityUnitLabel, type MealResult } from "../calculations/meal-comparison";
 import { formatMoney } from "../money";
 import { reportDate, reportFooter, type ReportOptions } from "./report";
@@ -30,9 +30,11 @@ export function mealSheets(result: MealResult, options: ReportOptions): Sheet<Bl
   result.incomplete.forEach(meal => notes.push(["Refeição não comparada", { value: `${meal.name}: dados insuficientes; não incluída nos totais. ${Object.values(meal.issues).join(" ")}`, wrap: true, height: 64 }]));
   return [{ sheet: "Resumo", data: summary, columns: [42, 38, 28, 28].map(width => ({ width })) }, { sheet: "Refeições", data: meals, columns: [30, ...Array<number>(14).fill(24)].map(width => ({ width })) }, { sheet: "Detalhamento", data: detail, columns: [28, 28, 24, 18, 24, 24, 18, 24].map(width => ({ width })) }, { sheet: "Premissas", data: notes, columns: [{ width: 28 }, { width: 100 }] }].map(sheet => ({ ...sheet, showGridLines: false }));
 }
-export async function createMealExcel(result: MealResult, options: ReportOptions) { return writeExcelFile(mealSheets(result, options), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
+export async function createMealExcel(result: MealResult, options: ReportOptions) {
+  const { default: writeExcelFile } = await import("write-excel-file/universal"); return writeExcelFile(styleExcelSheets(mealSheets(result, options)), { fontFamily: "Arial", fontSize: 11 }).toBlob(); }
 function requireCompleteMeal(result: MealResult) { if (!result.meals.length) throw new Error("Complete pelo menos uma refeição antes de exportar a comparação."); }
 export async function createMealPdf(result: MealResult, options: ReportOptions) {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   requireCompleteMeal(result);
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   doc.setTitle("Comer fora ou cozinhar?"); doc.setAuthor(options.brand.name); doc.setCreationDate(options.generatedAt); doc.setLanguage("pt-BR");
