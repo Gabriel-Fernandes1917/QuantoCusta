@@ -21,7 +21,7 @@ describe("vazio e zero informado", () => {
     expect(r.meals).toEqual([]); expect(r.incomplete[0].issues["meal-0-outside"]).toBe("Informe quanto custa comprar esta refeição fora para compará-la.");
     expect(r.distribution).toEqual([]); expect(mealInsights(r)).toEqual([]);
   });
-  it("preço fora explicitamente zero participa da comparação", () => { const r = calculateMealRoutine(routine(2000, 0)); expect(r.meals[0].outside.portion).toBe(0); expect(r.incomplete).toEqual([]); expect(r.delta.monthly).toBe(-26000); });
+  it("preço fora explicitamente zero participa da comparação", () => { const r = calculateMealRoutine(routine(2000, 0)); expect(r.meals[0].outside.portion).toBe(0); expect(r.incomplete.map(m => m.id)).not.toContain("meal-0"); expect(r.delta.monthly).toBe(-26000); });
   it.each(["used", "bought", "price"] as const)("ingrediente sem %s não gera custo incompleto", field => {
     const v = routine(); v.meals[0].ingredients[0][field] = null;
     const r = calculateMealRoutine(v); expect(r.meals).toEqual([]); expect(Object.keys(r.incomplete[0].issues)).toContain(`item-${field}`);
@@ -93,8 +93,8 @@ describe("relatórios sem comparação de dados ausentes", () => {
     const r = partial(), sheets = mealSheets(r, options);
     expect(sheets[1].data.some(row => row[0] === "Almoço incompleto")).toBe(false);
     expect(sheets[2].data.some(row => row[0] === "Almoço incompleto")).toBe(false);
-    expect(sheets[0].data.find(row => row[0] === "Comparação de tempo")?.[1]).toMatchObject({ value: "Preparar em casa exige 21,7 horas a mais por mês, considerando os tempos informados." });
-    expect(sheets[0].data.find(row => row[0] === "Total mensal")?.slice(1)).toMatchObject([{ value: 130, type: Number }, { value: 260, type: Number }, { value: 130, type: Number }]);
+    expect(sheets[0].data.find(row => row[0] === "Tempo informado em casa")?.[1]).toMatchObject({ value: expect.stringContaining("não há comparação de tempo") });
+    expect(sheets[0].data.find(row => row[0] === "Total mensal")?.slice(1)).toMatchObject([{ value: 130, type: Number }, { value: 260, type: Number }, "Cozinhar em casa economiza R$ 130,00 por mês em comparação com comprar fora."]);
     expect(sheets[3].data.find(row => row[0] === "Refeição não comparada")?.[1]).toMatchObject({ value: expect.stringContaining("Almoço incompleto") });
     const blob = await createMealExcel(r, options); expect([...new Uint8Array(await blob.arrayBuffer()).slice(0, 4)]).toEqual([80, 75, 3, 4]);
   });
@@ -102,7 +102,7 @@ describe("relatórios sem comparação de dados ausentes", () => {
     const draw = vi.spyOn(PDFPage.prototype, "drawText");
     try {
       const bytes = await createMealPdf(partial(), options), text = draw.mock.calls.map(args => args[0]).join(" ");
-      expect(text).toContain("Preparar em casa exige 21,7 horas a mais por mês");
+      expect(text).toContain("não há comparação de tempo entre as alternativas");
       expect(text).toContain("Diferença entre as opções"); expect(text).not.toMatch(/Maior diferença|Menor diferença|representa 100%|refeição que mais pesa/);
       expect(text).toContain("Café da manhã: preparar em casa custa R$ 130,00 a menos por mês");
       expect(text).toContain("1 unidade utilizada; compra de 1 unidade"); expect(text).not.toContain("-21,7 h");

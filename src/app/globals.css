@@ -144,7 +144,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .money-field { min-width: 0; }
 .money-field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.5; }
 .money-control { display: flex; align-items: center; gap: 10px; padding-left: 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-raised); }
-.money-control > span { font-size: 14px; color: var(--muted); }
+.money-control > span { flex-shrink: 0; white-space: nowrap; font-size: 14px; color: var(--muted); }
 .money-control input { width: 100%; min-width: 0; padding: 14px 10px 14px 0; background: transparent; border: 0; font-size: 16px; color: var(--ink); border-radius: 6px; }
 .money-control:has(input[aria-invalid="true"]) { border-color: var(--error); }
 .field-hint { font-size: 12px; line-height: 1.7; color: var(--muted); margin-top: 8px; }
@@ -290,6 +290,11 @@ select:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 /* Alimentação: reaproveita os campos, seções e cards existentes. */
 .meal-calculator h4 { font-size: 16px; font-weight: 650; line-height: 1.6; }
 .meal-ingredient { margin-block: 16px; }
+.meal-calculator .meal-purchased-quantity .money-period-select { width: auto; max-width: 55%; min-width: 0; }
+.meal-calculator .meal-duration { margin-top: 24px; }
+.meal-calculator .meal-duration-control { position: relative; }
+.meal-calculator .meal-duration-control input { padding-right: 90px; }
+.meal-calculator .meal-duration-control > span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; white-space: nowrap; pointer-events: none; }
 .meal-remove { border: 0; background: transparent; text-decoration: underline; padding: 8px 0; margin-top: 12px; color: var(--green); }
 .meal-outside-title, .meal-optional, .meal-new { margin-top: 24px; }
 .meal-results .property-columns, .meal-results .result-explanation { margin-top: 24px; }
