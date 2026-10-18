@@ -47,9 +47,35 @@ describe("periodicidades e custos únicos", () => {
     expect(r.scenarios[1].additional).toBe(period === "once" ? 0 : period === "annual" ? 10000 : 120000);
     expect(r.scenarios[1].unique).toBe(period === "once" ? 120000 : 0);
   });
-  it("IPTU único não entra no custo direto recorrente", () => {
+  it("rejeita IPTU único nos cálculos e ao salvar", () => {
     const v = emptyComparison(); Object.assign(v.properties[0], { tax: 120000, taxPeriod: "once" });
-    expect(calculateComparison(v).scenarios[0]).toMatchObject({ direct: 0, total: 0, annual: 0, unique: 120000 });
+    expect(() => calculateComparison(v)).toThrow(/Periodicidade/);
+    expect(() => encodeComparison(v)).toThrow(/Periodicidade/);
+  });
+  it("migra IPTU único salvo para anual preservando os valores e outros custos únicos", () => {
+    const v = emptyComparison();
+    Object.assign(v.properties[0], { tax: 120006, taxPeriod: "once", garage: 5000, garagePeriod: "once" });
+    v.impacts["tax:0"] = { applies: true, cents: 120006, period: "once" };
+    const restored = decodeComparison(JSON.stringify({ version: 1, values: v }));
+    expect(restored.properties[0]).toMatchObject({ tax: 120006, taxPeriod: "annual", garagePeriod: "once" });
+    expect(restored.impacts["tax:0"].period).toBe("annual");
+    expect(calculateComparison(restored).scenarios[0]).toMatchObject({ direct: 10001, total: 10001, annual: 120012, unique: 0 });
+  });
+  it("mantém IPTU anual por padrão e alterna apenas a interpretação do valor", () => {
+    const v = emptyComparison();
+    expect(v.properties.every(p => p.taxPeriod === "annual")).toBe(true);
+    v.properties[0].tax = 120006;
+    expect(calculateComparison(v).scenarios[0].direct).toBe(10001);
+    v.properties[0].taxPeriod = "monthly";
+    expect(calculateComparison(v).scenarios[0].direct).toBe(120006);
+    v.properties[0].taxPeriod = "annual";
+    expect(v.properties[0].tax).toBe(120006);
+    expect(calculateComparison(v).scenarios[0].direct).toBe(10001);
+  });
+  it("rejeita periodicidade única no impacto de IPTU sem afetar outros impactos", () => {
+    const v = emptyComparison();
+    v.impacts["tax:0"] = { applies: true, cents: 120000, period: "once" };
+    expect(() => calculateComparison(v)).toThrow(/Impacto/);
   });
   it.each(["monthly", "annual", "once"] as const)("item personalizado %s preserva o valor e separa totais", period => {
     const v = custom(emptyComparison(), "custom-fee", "Taxa", 0, 120006, period);

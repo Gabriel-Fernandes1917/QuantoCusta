@@ -242,6 +242,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .property-columns > * { min-width: 0; overflow-wrap: anywhere; }
 .comparison-area .result-explanation, .comparison-detail { min-width: 0; overflow-wrap: anywhere; }
 .property-form { min-width: 0; }
+.property-comparison-calculator .money-control > span { flex-shrink: 0; white-space: nowrap; }
+.property-comparison-calculator .property-form .money-grid { grid-template-columns: minmax(0, 1fr); }
 .property-form > h2 { font-size: 25px; margin-bottom: 20px; }
 .plain-field { margin-bottom: 20px; }
 .plain-field label, .custom-cost > label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
@@ -273,6 +275,15 @@ select:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 .comparison-detail h3 { font-size: 20px; }
 .detail-card { background: var(--background); padding: 16px; border-radius: 8px; margin-top: 12px; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
 .detail-card > span { display: block; color: var(--muted); font-size: 12px; }
+.property-report-summary { margin-top: 24px; padding: 20px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-accent); overflow-wrap: anywhere; }
+.property-report-summary h3 { font-size: 22px; line-height: 1.4; }
+.property-report-summary p { margin-top: 12px; line-height: 1.7; }
+.property-report-savings, .property-report-amounts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.property-report-savings dd { margin: 6px 0 0; font-size: clamp(24px, 4vw, 32px); font-weight: 700; font-variant-numeric: tabular-nums; }
+.property-report-amounts dd { margin: 4px 0 0; }
+.property-report-amounts dt { font-weight: 600; }
+.property-report-conclusion { margin-top: 16px; line-height: 1.7; }
+@media (min-width: 600px) { .property-report-savings, .property-report-amounts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .comparison-results > details > summary { min-height: 44px; cursor: pointer; }
 @media (min-width: 800px) { .property-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 

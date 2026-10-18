@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { breakEvenNote, breakEvenText, defaultImpactPeriod, differenceCopy, periodLabels, type ExpensePeriod, addCustomAmenity, removeCustomAmenity, calculateComparison, comparisonNotes, emptyComparison, foodItems, propertyName, relevantDifferences, transportItems, type Comparison, type ComparisonResult, type Cost, type Property } from "@/lib/calculations/property-comparison";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { breakEvenNote, breakEvenText, defaultImpactPeriod, differenceCopy, type ExpensePeriod, addCustomAmenity, removeCustomAmenity, calculateComparison, comparisonNotes, emptyComparison, foodItems, propertyName, relevantDifferences, transportItems, type Comparison, type ComparisonResult, type Cost, type Property } from "@/lib/calculations/property-comparison";
 import { formatMoney, moneyInput, parseMoney } from "@/lib/money";
 import { decodeComparison, encodeComparison, PROPERTY_STORAGE_KEY } from "@/lib/property-storage";
 import { MoneyInput } from "../money-input";
+import { PropertySummary, PropertyUniqueExpenses, PropertyExpenseDetails } from "../property-comparison-report";
 import { ExportComparison } from "../export-comparison";
 import type { ReportBrand } from "@/lib/export/report";
 
@@ -35,8 +36,8 @@ export function PropertyComparisonCalculator({ reportBrand }: { reportBrand: Rep
     }
     change({ ...values, properties: values.properties.map((p, i) => i === index ? { ...p, ...patch } : p) as Comparison["properties"] });
   }
-  function money(id: string, label: string, cents: number, onValue: (value: number) => void, hint?: string) {
-    return <MoneyInput id={id} label={label} hint={hint} value={draft[id] ?? (cents ? moneyInput(cents) : "")} error={errors[id]} onChange={text => {
+  function money(id: string, label: string, cents: number, onValue: (value: number) => void, hint?: string, trailingControl?: ReactNode) {
+    return <MoneyInput id={id} label={label} hint={hint} trailingControl={trailingControl} value={draft[id] ?? (cents ? moneyInput(cents) : "")} error={errors[id]} onChange={text => {
       setDraft(previous => ({ ...previous, [id]: text }));
       try { const value = parseMoney(text); setErrors(previous => ({ ...previous, [id]: "" })); if (value !== cents) onValue(value); }
       catch (error) { setErrors(previous => ({ ...previous, [id]: (error as Error).message })); setResult(null); }
@@ -62,7 +63,7 @@ export function PropertyComparisonCalculator({ reportBrand }: { reportBrand: Rep
   }
   function submit(e: FormEvent) { e.preventDefault(); const computed = validate(); if (computed) { setResult(computed); requestAnimationFrame(() => resultRef.current?.focus()); } }
   const differences = relevantDifferences(values);
-  return <div className="comparison-area"><form onSubmit={submit} noValidate>
+  return <div className="comparison-area property-comparison-calculator"><form onSubmit={submit} noValidate>
     <div className="form-intro"><h2>Dois imóveis, a sua rotina</h2><p>Comece pela moradia. Abra as outras seções conforme precisar. Campos vazios contam como zero; inclua apenas os gastos que mudam entre as opções.</p></div>
     <div className="property-columns">{values.properties.map((p, index) => <section className="property-form" key={index} aria-labelledby={`property-${index}`}>
       <h2 id={`property-${index}`}>Imóvel {index === 0 ? "A" : "B"}</h2>
@@ -70,7 +71,8 @@ export function PropertyComparisonCalculator({ reportBrand }: { reportBrand: Rep
       <details className="expense-section" open><summary><h3>Custos diretos da moradia</h3><span className="section-chevron" aria-hidden="true">+</span></summary><div className="section-body">
         <div className="plain-field"><label htmlFor={`kind-${index}`}>Custo principal</label><select id={`kind-${index}`} value={p.kind} onChange={e => updateProperty(index, { kind: e.target.value as Property["kind"] })}><option value="rent">Aluguel</option><option value="loan">Parcela/financiamento</option><option value="other">Outro custo mensal</option></select></div>
         <div className="money-grid">{money(`main-${index}`, p.kind === "rent" ? "Aluguel mensal" : p.kind === "loan" ? "Parcela mensal" : "Custo principal mensal", p.main, main => updateProperty(index, { main }))}{money(`condo-${index}`, "Condomínio mensal", p.condo, condo => updateProperty(index, { condo }))}
-          {p.included.includes("tax") ? <p className="field-hint">IPTU incluído: não será somado separadamente.</p> : <div>{period(`tax-${index}`, p.taxPeriod, taxPeriod => updateProperty(index, { taxPeriod }), true)}{money(`tax-${index}`, `IPTU (${periodLabels[p.taxPeriod]})`, p.tax, tax => updateProperty(index, { tax }))}</div>}
+          {p.included.includes("tax") ? <p className="field-hint">IPTU incluído: não será somado separadamente.</p> : money(`tax-${index}`, "IPTU", p.tax, tax => updateProperty(index, { tax }), undefined,
+            <select className="money-period-select" id={`tax-${index}-period`} aria-label={`IPTU do ${propertyName(p, index)}: periodicidade`} value={p.taxPeriod} onChange={e => updateProperty(index, { taxPeriod: e.target.value as Property["taxPeriod"] })}><option value="monthly">Mensal</option><option value="annual">Anual</option></select>)}
         </div>
         {list(index, "costs")}
       </div></details>
@@ -123,9 +125,13 @@ export function PropertyComparisonCalculator({ reportBrand }: { reportBrand: Rep
             {money(shared ? `${d.id}-check-${d.missingIn}` : `impact-${id}`, "Quanto você estima gastar?", cents, value => shared ? updateProperty(d.missingIn, d.id === "tax" ? { tax: value } : { garage: value }) : updateImpact({ cents: value }))}
             <div className="period-control"><label htmlFor={`impact-period-${id}`}>Esse gasto seria:</label><select id={`impact-period-${id}`} value={selectedPeriod ?? ""} required onChange={e => {
               const period = e.target.value as ExpensePeriod;
-              if (shared) updateProperty(d.missingIn, d.id === "tax" ? { taxPeriod: period } : { garagePeriod: period });
+              if (shared) {
+                if (d.id === "tax") {
+                  if (period === "monthly" || period === "annual") updateProperty(d.missingIn, { taxPeriod: period });
+                } else updateProperty(d.missingIn, { garagePeriod: period });
+              }
               else updateImpact({ period });
-            }}><option value="" disabled>Selecione</option><option value="monthly">Mensal</option><option value="annual">Anual</option><option value="once">Uma única vez</option></select></div>
+            }}><option value="" disabled>Selecione</option><option value="monthly">Mensal</option><option value="annual">Anual</option>{d.id !== "tax" && <option value="once">Uma única vez</option>}</select></div>
             {selectedPeriod === null && <p className="field-hint">Escolha quando esse gasto acontece para comparar.</p>}
           </>}
         </div>;
@@ -135,16 +141,15 @@ export function PropertyComparisonCalculator({ reportBrand }: { reportBrand: Rep
     <div className="storage-panel"><p><strong>Seus dados ficam somente neste navegador.</strong> Salvar é opcional; alterações precisam ser salvas novamente.</p><div className="storage-actions"><button type="button" disabled={!ready} onClick={() => { if (!validate()) return; try { localStorage.setItem(PROPERTY_STORAGE_KEY, encodeComparison(values)); setNotice("Comparação salva somente neste navegador."); } catch { setNotice("Não foi possível salvar. Seus campos foram mantidos."); } }}>Salvar simulação</button><button type="button" disabled={!ready} onClick={() => { let removed = true; try { localStorage.removeItem(PROPERTY_STORAGE_KEY); } catch { removed = false; } setValues(emptyComparison()); setServiceForm(null); setServiceName(""); setDraft({}); setErrors({}); setResult(null); setNotice(removed ? "Campos e comparação salva limpos." : "Campos limpos. Não foi possível apagar o armazenamento; limpe os dados do site no navegador."); }}>Limpar meus dados</button></div></div><p role="status" className="calculator-notice">{notice}</p><noscript>Ative JavaScript para calcular no seu dispositivo.</noscript>
   </form>
   {result && <section className="calculator-results comparison-results" tabIndex={-1} ref={resultRef} aria-labelledby="comparison-title"><p className="eyebrow">Preço não é necessariamente custo</p><h2 id="comparison-title">O custo de cada escolha</h2>
-    <div className="property-columns">{result.scenarios.map((s, i) => <article className="scenario-card" key={i}><p className="eyebrow">Imóvel {i === 0 ? "A" : "B"}</p><h3>{s.name}</h3><p className="result-total">{formatMoney(s.total)}</p><p className="field-hint">por mês, em custos recorrentes</p><dl>{[["Custo direto", s.direct], ["Custos recorrentes adicionais", s.additional], ["Transporte", s.transport], ["Alimentação relacionada", s.food], ["Outros impactos", s.other], ["Custo recorrente anual", s.annual]].map(([label, cents]) => <div className="comparison-pair" key={label}><dt>{label}</dt><dd>{formatMoney(cents as number)}</dd></div>)}</dl><p className="field-hint">Deslocamento: {hours(s.commute.weekly)} h/semana · {hours(s.commute.monthly)} h/mês · {hours(s.commute.annual)} h/ano.</p><p className="field-hint">Incluído/disponível: {s.included.join(", ") || "Nenhum item marcado"}.</p>{s.direct < s.total && <p className="field-hint">Há {formatMoney(s.total - s.direct)} mensais além dos custos diretos da moradia.</p>}</article>)}</div>
-    <div className="result-explanation"><p>Diferença recorrente mensal (B − A): <strong>{formatMoney(result.delta.monthly)}</strong>.</p><p>{differenceText(result.scenarios[1].name, result.scenarios[0].name, result.delta.direct, "custo direto")}</p><p>{differenceText(result.scenarios[1].name, result.scenarios[0].name, result.delta.monthly, "custo total recorrente")}</p><p>Diferença recorrente anual (B − A): <strong>{formatMoney(result.delta.annual)}</strong>. {result.delta.time === 0 ? "Os tempos mensais de deslocamento são iguais." : `${result.scenarios[1].name} envolve ${hours(Math.abs(result.delta.time))} horas ${result.delta.time > 0 ? "a mais" : "a menos"} de deslocamento por mês que ${result.scenarios[0].name}.`}</p></div>
-    <section className="comparison-detail"><h3>Custos únicos decorrentes da escolha</h3><div className="property-columns">{result.scenarios.map((s, i) => <article className="scenario-card" key={i}><h4>{s.name}</h4><p className="result-total">{formatMoney(s.unique)}</p><p className="field-hint">Uma única vez; separado dos custos recorrentes.</p></article>)}</div><p>Diferença de custos únicos (B − A): <strong>{formatMoney(result.delta.unique)}</strong>.</p></section>
-    {result.breakEven && <section className="result-explanation"><h3>Ponto de equilíbrio matemático</h3>{breakEvenText(result).split("\n\n").map(paragraph => <p key={paragraph}>{paragraph}</p>)}<p className="field-hint">{breakEvenNote}</p></section>}
-    <section className="comparison-detail"><h3>Por que os custos são diferentes?</h3><p className="field-hint">Diferença = B − A. Valores recorrentes são equivalentes mensais; custos únicos aparecem separadamente.</p>{result.details.filter(d => d.informedA || d.informedB).map((d, i) => <div className="detail-card" key={i}><strong>{d.item}</strong><span>{d.category}</span><p className="field-hint">Informado: A {formatMoney(d.informedA)} ({periodLabels[d.periodA]}); B {formatMoney(d.informedB)} ({periodLabels[d.periodB]}).</p>{(d.periodA !== "once" || d.periodB !== "once") && <><div>Recorrente mensal: A {d.periodA === "once" ? "—" : formatMoney(d.a)} · B {d.periodB === "once" ? "—" : formatMoney(d.b)}</div><div>Diferença recorrente mensal: {formatMoney(d.b - d.a)}</div></>}{(d.periodA === "once" || d.periodB === "once") && <><div>Custos únicos: A {formatMoney(d.uniqueA)} · B {formatMoney(d.uniqueB)}</div><div>Diferença de custos únicos: {formatMoney(d.uniqueB - d.uniqueA)}</div></>}</div>)}</section>
-    <section className="expense-breakdown"><h3>Composição dos custos recorrentes</h3><p className="field-hint">Percentuais do custo mensal recorrente. Custos únicos ficam fora desta distribuição.</p><div className="property-columns">{result.scenarios.map((s, i) => <div key={i}><h4>{s.name}</h4><ul>{s.categories.map(c => <li key={c.label}><div className="distribution-label"><span>{c.label}</span><strong>{s.total ? hours(c.cents / s.total * 100) : "0"}%</strong></div><div className="distribution-track" aria-hidden="true"><div style={{ width: `${s.total ? c.cents / s.total * 100 : 0}%` }} /></div><p>{formatMoney(c.cents)}/mês</p></li>)}</ul></div>)}</div></section>
+    <PropertySummary result={result} />
+    <div className="property-columns">{result.scenarios.map((s, i) => <article className="scenario-card" key={i}><p className="eyebrow">Imóvel {i === 0 ? "A" : "B"}</p><h3>{s.name}</h3><p className="result-total">{formatMoney(s.total)}</p><p className="field-hint">por mês, nas despesas informadas</p><dl>{[["Moradia", s.direct], ["Despesas adicionais", s.additional], ["Transporte", s.transport], ["Alimentação relacionada", s.food], ["Outros impactos", s.other], ["Total por ano", s.annual]].map(([label, cents]) => <div className="comparison-pair" key={label}><dt>{label}</dt><dd>{formatMoney(cents as number)}</dd></div>)}</dl><p className="field-hint">Deslocamento: {hours(s.commute.weekly)} h/semana · {hours(s.commute.monthly)} h/mês · {hours(s.commute.annual)} h/ano.</p><p className="field-hint">Incluído/disponível: {s.included.join(", ") || "Nenhum item marcado"}.</p></article>)}</div>
+    <PropertyUniqueExpenses result={result} />
+    {result.breakEven && <section className="result-explanation"><h3>Em quanto tempo a economia compensa o gasto inicial?</h3>{breakEvenText(result).split("\n\n").map(paragraph => <p key={paragraph}>{paragraph}</p>)}<p className="field-hint">{breakEvenNote}</p></section>}
+    <PropertyExpenseDetails result={result} />
+    <section className="expense-breakdown"><h3>Como o gasto mensal se divide</h3><p className="field-hint">Participação de cada categoria no gasto mensal. Despesas únicas ficam fora desta distribuição.</p><div className="property-columns">{result.scenarios.map((s, i) => <div key={i}><h4>{s.name}</h4><ul>{s.categories.map(c => <li key={c.label}><div className="distribution-label"><span>{c.label}</span><strong>{s.total ? hours(c.cents / s.total * 100) : "0"}%</strong></div><div className="distribution-track" aria-hidden="true"><div style={{ width: `${s.total ? c.cents / s.total * 100 : 0}%` }} /></div><p>{formatMoney(c.cents)}/mês</p></li>)}</ul></div>)}</div></section>
     <details><summary>Premissas e limites da comparação</summary>{comparisonNotes.map(note => <p className="field-hint" key={note}>{note}</p>)}{result.unanswered.length > 0 && <p className="field-hint">Há diferenças sem resposta. Elas não receberam custos adicionais.</p>}</details>
     <ExportComparison result={result} brand={reportBrand} />
   </section>}
   </div>;
 }
 function hours(value: number) { return value.toLocaleString("pt-BR", { maximumFractionDigits: 1 }); }
-function differenceText(b: string, a: string, delta: number, kind: string) { return delta === 0 ? `${a} e ${b} têm o mesmo ${kind}.` : `O ${kind} de ${b} é ${formatMoney(Math.abs(delta))} ${delta > 0 ? "maior" : "menor"} por mês que o de ${a}.`; }
