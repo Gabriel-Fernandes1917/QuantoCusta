@@ -8,13 +8,13 @@ export const incomeFields = [
 ] as const;
 
 export const vehicleFieldIds = ["fuel", "vehicleLoan", "vehicleInsurance", "maintenance", "vehicleTax", "vehicleFees", "parking", "tolls"] as const;
-export const annualVehicleFieldIds = ["vehicleInsurance", "vehicleTax", "vehicleFees"] as const;
+export const annualVehicleFieldIds = ["vehicleInsurance", "maintenance", "vehicleTax", "vehicleFees"] as const;
 export type AnnualVehicleFieldId = typeof annualVehicleFieldIds[number];
 export type Period = "monthly" | "annual";
 export type VehiclePeriods = Record<AnnualVehicleFieldId, Period>;
 
 export function defaultVehiclePeriods(): VehiclePeriods {
-  return { vehicleInsurance: "monthly", vehicleTax: "annual", vehicleFees: "annual" };
+  return { vehicleInsurance: "monthly", maintenance: "monthly", vehicleTax: "annual", vehicleFees: "annual" };
 }
 
 export const expenseCategories = [

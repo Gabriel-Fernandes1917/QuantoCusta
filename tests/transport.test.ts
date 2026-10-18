@@ -3,6 +3,22 @@ import { calculateCostOfLiving, emptySimulation, toMonthlyCents } from "../src/l
 import { MAX_MONEY_CENTS } from "../src/lib/money";
 
 describe("veículo próprio e periodicidade", () => {
+  it("alterna a interpretação da manutenção preservando o valor informado", () => {
+    const values = { ...emptySimulation(), hasVehicle: true, salary: 500000, maintenance: 120006 };
+    expect(values.vehiclePeriods.maintenance).toBe("monthly");
+    const monthly = calculateCostOfLiving(values);
+    const annual = calculateCostOfLiving({ ...values, vehiclePeriods: { ...values.vehiclePeriods, maintenance: "annual" } });
+    expect(monthly.monthlyExpenses).toBe(120006);
+    expect(annual.monthlyExpenses).toBe(10001);
+    expect(annual.annualExpenses).toBe(120012);
+    expect(annual.cashExpenses).toBe(10001);
+    expect(annual.balance).toBe(489999);
+    expect(annual.committedPercentage).toBeCloseTo(2.0002);
+    expect(annual.categories.find(category => category.id === "transport")?.cents).toBe(10001);
+    expect(annual.details[0]).toMatchObject({ id: "maintenance", informedCents: 120006, monthlyCents: 10001, period: "annual" });
+    expect(values.maintenance).toBe(120006);
+    expect(calculateCostOfLiving(values)).toEqual(monthly);
+  });
   it.each([[0, 0], [1, 0], [5, 0], [6, 1], [11, 1], [12, 1], [10000, 833], [10002, 834], [240000, 20000], [MAX_MONEY_CENTS, 83333333333]])("converte %i centavos anuais para %i mensais", (annual, monthly) => {
     expect(toMonthlyCents(annual, "annual")).toBe(monthly);
   });
@@ -10,7 +26,7 @@ describe("veículo próprio e periodicidade", () => {
     expect(toMonthlyCents(10002, "monthly")).toBe(10002);
   });
   it("inclui IPVA, seguro e licenciamento anuais em todos os totais", () => {
-    const result = calculateCostOfLiving({ ...emptySimulation(), hasVehicle: true, salary: 500000, rent: 100000, vehicleTax: 240000, vehicleInsurance: 300000, vehicleFees: 24000, vehiclePeriods: { vehicleTax: "annual", vehicleInsurance: "annual", vehicleFees: "annual" } });
+    const result = calculateCostOfLiving({ ...emptySimulation(), hasVehicle: true, salary: 500000, rent: 100000, vehicleTax: 240000, vehicleInsurance: 300000, vehicleFees: 24000, vehiclePeriods: { maintenance: "monthly", vehicleTax: "annual", vehicleInsurance: "annual", vehicleFees: "annual" } });
     expect(result.categories.find(category => category.id === "transport")?.cents).toBe(47000);
     expect(result.monthlyExpenses).toBe(147000);
     expect(result.annualExpenses).toBe(1764000);

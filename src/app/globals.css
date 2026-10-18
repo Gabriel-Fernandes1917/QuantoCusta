@@ -194,10 +194,43 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .vehicle-subsection { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 24px; }
 .vehicle-subsection h4 { font-size: 17px; font-weight: 650; margin: 0 0 12px; }
 .vehicle-field { min-width: 0; }
-.period-control { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-.period-control label { font-size: 12px; color: var(--muted); flex: 1 1 100px; }
-.period-control select { background: var(--surface-muted); color: var(--ink); border: 1px solid var(--border-strong); border-radius: 6px; padding: 10px; min-height: 44px; font-size: 16px; max-width: 100%; }
-.period-control select:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.money-control-with-period { gap: 8px; }
+.money-control-with-period > span { flex-shrink: 0; }
+.money-control-with-period input { flex: 1; width: 0; }
+.money-period-select {
+  color-scheme: light;
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 44px;
+  padding: 0 30px 0 10px;
+  border: 0;
+  border-radius: 0 7px 7px 0;
+  background-color: var(--surface-raised);
+  color: var(--ink);
+  /* Seta sem a área de fundo desenhada pelo navegador; o menu continua nativo. */
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 15px center, right 10px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.money-period-select option { color-scheme: inherit; color: var(--ink); background-color: var(--surface-raised); }
+.money-period-select option:checked { color: var(--on-accent); background-color: var(--green); }
+:root[data-theme="dark"] .money-period-select { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .money-period-select { color-scheme: dark; }
+}
+.money-control-with-period:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.money-control-with-period input:focus-visible { outline: none; }
+.money-period-select:focus-visible { outline: 2px solid var(--focus); outline-offset: -4px; }
+@media (forced-colors: active) {
+  .money-period-select { appearance: auto; -webkit-appearance: auto; background-image: none; padding-right: 10px; }
+  .money-period-select option:checked { color: HighlightText; background-color: Highlight; }
+}
 .export-panel { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
 .export-panel h3 { font-size: 18px; font-weight: 650; margin-bottom: 12px; line-height: 1.4; }
 .export-panel > p:not(.field-hint):not(.calculator-notice) { font-size: 14px; line-height: 1.8; color: var(--muted); }

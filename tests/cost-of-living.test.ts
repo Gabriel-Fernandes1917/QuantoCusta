@@ -42,7 +42,7 @@ describe("custo futuro de morar sozinho", () => {
   it("soma todos os campos de despesa uma única vez", () => {
     const values = emptySimulation();
     values.hasVehicle = true;
-    values.vehiclePeriods = { vehicleInsurance: "monthly", vehicleTax: "monthly", vehicleFees: "monthly" };
+    values.vehiclePeriods = { maintenance: "monthly", vehicleInsurance: "monthly", vehicleTax: "monthly", vehicleFees: "monthly" };
     expenseCategories.forEach(category => category.fields.forEach(field => { values[field.id] = 1; }));
     const result = calculateCostOfLiving(values);
     expect(result.monthlyExpenses).toBe(33);
@@ -95,7 +95,7 @@ describe("custo futuro de morar sozinho", () => {
   it("suporta o maior valor de cada campo sem perder centavos", () => {
     const values = emptySimulation();
     values.hasVehicle = true;
-    values.vehiclePeriods = { vehicleInsurance: "monthly", vehicleTax: "monthly", vehicleFees: "monthly" };
+    values.vehiclePeriods = { maintenance: "monthly", vehicleInsurance: "monthly", vehicleTax: "monthly", vehicleFees: "monthly" };
     allFields.forEach(field => { values[field.id] = MAX_MONEY_CENTS; });
     const result = calculateCostOfLiving(values);
     expect(result.cashIncome).toBe(3 * MAX_MONEY_CENTS);
