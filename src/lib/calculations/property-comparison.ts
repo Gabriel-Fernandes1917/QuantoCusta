@@ -35,7 +35,7 @@ export function differenceCopy(item: Amenity, included: string, missing: string)
   return { statement, question: copy[1] };
 }
 export type Property = {
-  name: string; kind: "rent" | "loan" | "other"; main: number; condo: number; tax: number; taxPeriod: ExpensePeriod;
+  name: string; kind: "rent" | "loan" | "other"; main: number; condo: number; tax: number; taxPeriod: Period;
   garage: number; garagePeriod?: ExpensePeriod; included: string[]; costs: Cost[]; transport: Cost[]; food: Cost[]; other: Cost[];
   commute: { outward: number; return: number; days: number };
 };
@@ -80,14 +80,14 @@ export function validateComparison(input: Comparison) {
   input.properties.forEach(p => {
     if (typeof p.name !== "string" || p.name.length > 80 || !["rent", "loan", "other"].includes(p.kind) || !Array.isArray(p.included) || new Set(p.included).size !== p.included.length || p.included.some(id => !input.amenities.some(a => a.id === id))) throw new Error("Imóvel inválido.");
     [p.main, p.condo, p.tax, p.garage].forEach(assertMoney);
-    if (!["monthly", "annual", "once"].includes(p.taxPeriod) || (p.garagePeriod !== undefined && !["monthly", "annual", "once"].includes(p.garagePeriod))) throw new Error("Periodicidade inválida.");
+    if (!["monthly", "annual"].includes(p.taxPeriod) || (p.garagePeriod !== undefined && !["monthly", "annual", "once"].includes(p.garagePeriod))) throw new Error("Periodicidade inválida.");
     [p.costs, p.transport, p.food, p.other].forEach(list => {
       if (!Array.isArray(list) || list.length > 50) throw new Error("Lista de custos inválida.");
       list.forEach(c => { if (typeof c.id !== "string" || typeof c.name !== "string" || c.name.length > 80) throw new Error("Custo inválido."); toMonthlyCents(c.cents, c.period); });
     });
     calculateCommute(p.commute);
   });
-  Object.values(input.impacts).forEach(i => { if (![true, false, null].includes(i.applies) || (i.period != null && !["monthly", "annual", "once"].includes(i.period))) throw new Error("Impacto inválido."); assertMoney(i.cents); });
+  Object.entries(input.impacts).forEach(([id, i]) => { if (![true, false, null].includes(i.applies) || (i.period != null && !(id.startsWith("tax:") ? ["monthly", "annual"] : ["monthly", "annual", "once"]).includes(i.period))) throw new Error("Impacto inválido."); assertMoney(i.cents); });
 }
 export type Detail = { category: string; item: string; a: number; b: number; uniqueA: number; uniqueB: number; periodA: ExpensePeriod; periodB: ExpensePeriod; informedA: number; informedB: number };
 export function calculateComparison(input: Comparison) {

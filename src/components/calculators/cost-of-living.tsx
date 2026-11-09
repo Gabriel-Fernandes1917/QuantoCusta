@@ -135,7 +135,14 @@ export function CostOfLivingCalculator({ reportBrand }: { reportBrand: ReportBra
         {expenseCategories.map(category => (
           <details className="expense-section" key={category.id}>
             <summary><h3>{category.label}</h3><span>{subtotal(category.fields)}</span><span className="section-chevron" aria-hidden="true">+</span></summary>
-            <div className="section-body"><p className="section-note">{category.hint}</p>{category.id === "transport" ? <TransportFields draft={draft} errors={errors} hasVehicle={hasVehicle} periods={vehiclePeriods} onChange={update} onVehicleChange={value => { setHasVehicle(value); setResult(null); setNotice(""); }} onPeriodsChange={value => { setVehiclePeriods(value); setResult(null); setNotice(""); }} /> : <div className="money-grid">{category.fields.map(input)}{category.id === "food" && input(benefitUseField)}</div>}</div>
+            <div className="section-body"><p className="section-note">{category.hint}</p>{category.id === "transport" ? <TransportFields draft={draft} errors={errors} hasVehicle={hasVehicle} periods={vehiclePeriods} onChange={update} onVehicleChange={value => { setHasVehicle(value); setResult(null); setNotice(""); }} onPeriodsChange={value => {
+              setVehiclePeriods(value);
+              if (result && value.maintenance !== vehiclePeriods.maintenance) {
+                const values = validate();
+                setResult(values ? calculateCostOfLiving({ ...values, vehiclePeriods: value }) : null);
+              } else setResult(null);
+              setNotice("");
+            }} /> : <div className="money-grid">{category.fields.map(input)}{category.id === "food" && input(benefitUseField)}</div>}</div>
           </details>
         ))}
         <div className="calculator-actions"><button className="button" type="submit" disabled={!ready}>Calcular meu custo de vida <span aria-hidden="true">↗</span></button></div>
@@ -152,7 +159,7 @@ export function CostOfLivingCalculator({ reportBrand }: { reportBrand: ReportBra
           <ResultCard label="Benefícios alimentares (VA/VR)" value={formatMoney(result.foodBenefits)} hint="Separados da renda em dinheiro." />
           <ResultCard label="Despesas mensais" value={formatMoney(result.monthlyExpenses)} />
           <ResultCard label="Despesas pagas em dinheiro" value={formatMoney(result.cashExpenses)} />
-          <ResultCard label="Saldo mensal em dinheiro" value={formatMoney(result.balance)} />
+          <ResultCard label="Quanto sobra no mês" value={formatMoney(result.balance)} />
           <ResultCard label="Custo anual estimado" value={formatMoney(result.annualExpenses)} hint="Despesas mensais × 12. Não inclui mudança ou reajustes." />
           <ResultCard label="Renda em dinheiro comprometida" value={result.committedPercentage === null ? "Não calculável" : formatPercentage(result.committedPercentage)} hint={result.committedPercentage === null ? "Informe uma renda maior que zero para calcular o percentual." : "Despesas pagas em dinheiro ÷ renda em dinheiro."} />
         </dl>

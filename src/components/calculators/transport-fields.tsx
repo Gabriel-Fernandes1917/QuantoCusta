@@ -23,8 +23,8 @@ export function TransportFields({ draft, errors, hasVehicle, periods, onChange, 
       catch { equivalent = "Confira o valor para ver o equivalente mensal."; }
     }
     return <div key={field.id} className="vehicle-field">
-      {annualId && <div className="period-control"><label htmlFor={`${field.id}-period`}>{field.label}: periodicidade</label><select id={`${field.id}-period`} value={periods[annualId]} onChange={event => onPeriodsChange({ ...periods, [annualId]: event.target.value })}><option value="monthly">Mensal</option><option value="annual">Anual</option></select></div>}
-      <MoneyInput id={field.id} label={`${field.label}${annualId ? periods[annualId] === "annual" ? " — valor anual" : " — valor mensal" : ""}`} value={draft[field.id]} error={errors[field.id]} hint={equivalent || undefined} onChange={value => onChange(field.id, value)} />
+      <MoneyInput id={field.id} label={field.label} value={draft[field.id]} error={errors[field.id]} hint={equivalent || undefined} onChange={value => onChange(field.id, value)}
+        trailingControl={annualId ? <select className="money-period-select" id={`${field.id}-period`} aria-label={`${field.label}: periodicidade`} value={periods[annualId]} onChange={event => onPeriodsChange({ ...periods, [annualId]: event.target.value })}><option value="monthly">Mensal</option><option value="annual">Anual</option></select> : undefined} />
     </div>;
   }
 
@@ -34,7 +34,7 @@ export function TransportFields({ draft, errors, hasVehicle, periods, onChange, 
       <label><input type="radio" name="hasVehicle" value="no" checked={hasVehicle === false} onChange={() => onVehicleChange(false)} /> Não</label>
     </div><p className="field-hint">Pode ser um carro ou uma moto que você já tem ou pretende ter. Escolha uma opção para ajustar os campos.</p></fieldset>
     <div className="money-grid">{fields.filter(field => !isVehicleField(field.id)).map(fieldInput)}</div>
-    {hasVehicle === true && <section className="vehicle-subsection" aria-labelledby="vehicle-title"><h4 id="vehicle-title">Veículo próprio</h4><p className="section-note">Seguro, IPVA e licenciamento podem ser informados por ano. O equivalente mensal é arredondado para o centavo mais próximo.</p><div className="money-grid">{fields.filter(field => isVehicleField(field.id)).map(fieldInput)}</div></section>}
+    {hasVehicle === true && <section className="vehicle-subsection" aria-labelledby="vehicle-title"><h4 id="vehicle-title">Veículo próprio</h4><p className="section-note">Seguro, manuten??o, IPVA e licenciamento podem ser informados por ano. O equivalente mensal é arredondado para o centavo mais próximo.</p><div className="money-grid">{fields.filter(field => isVehicleField(field.id)).map(fieldInput)}</div></section>}
     {hasVehicle === false && <p className="field-hint">Os gastos de veículo próprio ficam fora do cálculo. Se você voltar a selecionar “Sim”, os valores digitados serão mantidos.</p>}
   </div>;
 }

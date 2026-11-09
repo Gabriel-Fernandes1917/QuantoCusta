@@ -8,8 +8,10 @@ const unitInfo: Record<Unit, { family: string; factor: bigint }> = {
   ml: { family: "volume", factor: BigInt(1) }, L: { family: "volume", factor: BigInt(1000) }, unit: { family: "count", factor: BigInt(1) },
 };
 export type Ingredient = { id: string; name: string; used: number | null; usedUnit: Unit; price: number | null; bought: number | null; boughtUnit: Unit };
-export type Meal = { id: string; name: string; enabled: boolean; frequency: number | null; ingredients: Ingredient[]; outside: number | null };
-export type MealRoutine = { meals: Meal[]; preparation: { gas: number; electricity: number; other: number }; time: { shopping: number; cooking: number; cleaning: number; outside: number } };
+// enabled e os tempos cooking/outside são mantidos para ler rotinas antigas;
+// a participação agora depende dos campos válidos e o preparo vem de cada refeição.
+export type Meal = { id: string; name: string; enabled: boolean; preparationMinutes?: number | null; frequency: number | null; ingredients: Ingredient[]; outside: number | null };
+export type MealRoutine = { meals: Meal[]; preparation: { gas: number; electricity: number; water?: number; other: number }; time: { shopping: number; cooking: number; cleaning: number; outside: number } };
 export function emptyMeal(id: string, name: string): Meal { return { id, name, enabled: false, frequency: null, ingredients: [], outside: null }; }
 export function emptyIngredient(id: string): Ingredient { return { id, name: "", used: null, usedUnit: "g", price: null, bought: null, boughtUnit: "g" }; }
 export function emptyMealRoutine(): MealRoutine {
@@ -77,15 +79,21 @@ export function validateMealRoutine(input: MealRoutine) {
     if (typeof meal.enabled !== "boolean" || !Array.isArray(meal.ingredients) || meal.ingredients.length > 50) throw new Error("Refeição inválida.");
     if (meal.frequency != null) { quantity(meal.frequency); if (meal.frequency > 1000) throw new Error("Frequência inválida."); }
     if (meal.outside != null) assertMoney(meal.outside);
+    if (meal.preparationMinutes != null) { quantity(meal.preparationMinutes); if (meal.preparationMinutes > 10080) throw new Error("Informe até 10.080 minutos de preparo por refeição."); }
     meal.ingredients.forEach(item => { id(item.id); name(item.name); if (item.used != null) quantity(item.used); if (item.bought != null) quantity(item.bought); if (item.price != null) assertMoney(item.price); if (!units.includes(item.usedUnit) || !units.includes(item.boughtUnit)) throw new Error("Unidade inválida."); });
   });
-  [input.preparation.gas, input.preparation.electricity, input.preparation.other].forEach(assertMoney);
+  [input.preparation.gas, input.preparation.electricity, input.preparation.water ?? 0, input.preparation.other].forEach(assertMoney);
   calculateMealTime(input.time);
 }
 export function removeIngredient(input: MealRoutine, mealId: string, itemId: string): MealRoutine { return { ...input, meals: input.meals.map(m => m.id === mealId ? { ...m, ingredients: m.ingredients.filter(i => i.id !== itemId) } : m) }; }
 export function removeMeal(input: MealRoutine, id: string): MealRoutine { return { ...input, meals: input.meals.filter(m => m.id !== id) }; }
+export function mealIsUsed(meal: Meal): boolean {
+  // Nome e o antigo enabled não indicam preenchimento. Zero explícito é um dado.
+  return meal.frequency != null || meal.outside != null || meal.preparationMinutes != null || meal.ingredients.length > 0;
+}
 export function mealIssues(meal: Meal): Record<string, string> {
   const issues: Record<string, string> = {};
+  if (!mealIsUsed(meal)) return issues;
   if (meal.frequency == null) issues[`${meal.id}-frequency`] = "Informe a frequência semanal desta refeição.";
   if (meal.outside == null) issues[`${meal.id}-outside`] = "Informe quanto custa comprar esta refeição fora para compará-la.";
   if (!meal.ingredients.length) issues[`${meal.id}-items`] = "Adicione os itens utilizados nesta refeição para calcular o custo em casa.";
@@ -99,13 +107,13 @@ export function mealIssues(meal: Meal): Record<string, string> {
 }
 export function calculateMealRoutine(input: MealRoutine) {
   validateMealRoutine(input);
-  const incomplete = input.meals.filter(m => m.enabled).map(m => ({ id: m.id, name: m.name || "Refeição sem nome", issues: mealIssues(m) })).filter(m => Object.keys(m.issues).length);
-  const meals = input.meals.filter(m => m.enabled && !incomplete.some(missing => missing.id === m.id)).map((meal, i) => {
+  const incomplete = input.meals.map(m => ({ id: m.id, name: m.name || "Refeição sem nome", issues: mealIssues(m) })).filter(m => Object.keys(m.issues).length);
+  const meals = input.meals.filter(m => mealIsUsed(m) && !incomplete.some(missing => missing.id === m.id)).map((meal, i) => {
     const frequency = meal.frequency!;
     const home = homeMealCost(meal.ingredients), outside = outsideMealCost(meal);
     const costs = (cents: number) => ({ portion: cents, weekly: frequencyCost(cents, frequency, "weekly"), monthly: frequencyCost(cents, frequency, "monthly"), annual: frequencyCost(cents, frequency, "annual") });
     const a = costs(home), b = costs(outside);
-    return { id: meal.id, name: meal.name.trim() || `Refeição ${i + 1}`, frequency, home: a, outside: b, delta: { portion: b.portion - a.portion, weekly: b.weekly - a.weekly, monthly: b.monthly - a.monthly, annual: b.annual - a.annual }, ingredients: meal.ingredients.map(item => ({ ...item, used: item.used!, bought: item.bought!, price: item.price!, cost: ingredientCost(item) })) };
+    return { preparationMinutes: meal.preparationMinutes ?? null, id: meal.id, name: meal.name.trim() || `Refeição ${i + 1}`, frequency, home: a, outside: b, delta: { portion: b.portion - a.portion, weekly: b.weekly - a.weekly, monthly: b.monthly - a.monthly, annual: b.annual - a.annual }, ingredients: meal.ingredients.map(item => ({ ...item, used: item.used!, bought: item.bought!, price: item.price!, cost: ingredientCost(item) })) };
   });
   const foodHome = safeSum(meals.map(m => m.home.monthly)), foodOutside = safeSum(meals.map(m => m.outside.monthly));
   const preparation = preparationCost(input.preparation), preparationAnnual = safeSum([preparation * 12]);
@@ -114,7 +122,12 @@ export function calculateMealRoutine(input: MealRoutine) {
   const distribution = meals.map(m => ({ id: m.id, name: m.name, home: foodHome ? m.home.monthly / foodHome * 100 : null, outside: foodOutside ? m.outside.monthly / foodOutside * 100 : null }));
   const active = meals.filter(m => m.frequency > 0);
   const matching = (value: (m: typeof meals[number]) => number, maximum: boolean) => { if (!active.length) return []; const target = (maximum ? Math.max : Math.min)(...active.map(value)); return active.filter(m => value(m) === target).map(m => m.id); };
-  return { meals, incomplete, foodHome, foodOutside, preparation, preparationDetails: { ...input.preparation }, homeMonthly, outsideMonthly, homeAnnual, outsideAnnual, delta: { monthly: outsideMonthly - homeMonthly, annual: outsideAnnual - homeAnnual }, time: calculateMealTime(input.time), timeDetails: { ...input.time }, distribution, insights: { highestHome: foodHome ? matching(m => m.home.monthly, true) : [], largestDifference: matching(m => Math.abs(m.delta.monthly), true), smallestDifference: matching(m => Math.abs(m.delta.monthly), false) } };
+  const preparationWeekly = meals.reduce((sum, m) => sum + (m.preparationMinutes ?? 0) * m.frequency / 60, 0);
+  const reportedTime = calculateMealTime({ shopping: input.time.shopping, cleaning: input.time.cleaning, cooking: 0, outside: 0 });
+  const weekly = reportedTime.home.weekly + preparationWeekly;
+  if (weekly > 168) throw new Error("O tempo informado em casa não pode exceder 168 horas por semana.");
+  const time = { ...reportedTime, home: { weekly, monthly: weekly * 52 / 12, annual: weekly * 52 } };
+  return { preparationWeekly, hasPreparationTime: meals.some(m => m.preparationMinutes != null), meals, incomplete, foodHome, foodOutside, preparation, preparationDetails: { ...input.preparation }, homeMonthly, outsideMonthly, homeAnnual, outsideAnnual, delta: { monthly: outsideMonthly - homeMonthly, annual: outsideAnnual - homeAnnual }, time, timeDetails: { shopping: input.time.shopping, cleaning: input.time.cleaning, cooking: preparationWeekly, outside: 0 }, distribution, insights: { highestHome: foodHome ? matching(m => m.home.monthly, true) : [], largestDifference: matching(m => Math.abs(m.delta.monthly), true), smallestDifference: matching(m => Math.abs(m.delta.monthly), false) } };
 }
 export type MealResult = ReturnType<typeof calculateMealRoutine>;
 export function mealDifferenceText(home: number, outside: number, period = ""): string {
@@ -153,9 +166,17 @@ export function mealInsights(result: MealResult): string[] {
 export const mealNotes = [
   "A mesma frequência semanal é aplicada aos cenários em casa e fora. São usadas 52 semanas por ano e 52/12 semanas por mês, sem descontar férias ou feriados.",
   "O custo proporcional de cada item é arredondado ao centavo mais próximo, com metade para cima. Custos semanais, mensais e anuais de cada refeição são arredondados separadamente; o anual pode diferir alguns centavos do mensal × 12.",
-  "Gás, energia e outros custos de preparo são estimativas mensais adicionais. Entram apenas no total geral em casa, sem divisão entre refeições. Não inclua despesas que existiriam mesmo sem cozinhar.",
+  "Gás, energia, água e outros custos de preparo são estimativas mensais adicionais. Entram apenas no total geral em casa, sem divisão entre refeições. Não inclua despesas que existiriam mesmo sem cozinhar.",
   "A distribuição percentual considera somente alimentos/refeições, sem custos adicionais de preparo. Maior e menor diferença comparam o tamanho da diferença mensal e sempre indicam qual cenário custa mais. Empates são apresentados juntos.",
   "Tempo informado é separado do dinheiro e não recebe valor monetário. Custos de preparo e tempo são opcionais. Campos essenciais vazios são não informados; zero digitado é preservado. Refeições incompletas ficam fora da comparação até seus dados serem preenchidos.",
-  "A Coyler compara apenas custos e tempos informados. A ferramenta não avalia aspectos nutricionais das refeições.",
+  "O Coyler compara apenas custos e tempos informados. A ferramenta não avalia aspectos nutricionais das refeições.",
   "Estimativas informativas baseadas exclusivamente nos valores informados, sem médias de mercado, receitas ou recomendações financeiras.",
 ];
+
+export function mealSavingsText(home: number, outside: number, period = "por mês"): string {
+  if (home === outside) return `As duas alternativas têm o mesmo custo ${period}.`;
+  return `${home < outside ? "Cozinhar em casa" : "Comprar fora"} economiza ${formatMoney(Math.abs(outside - home))} ${period} em comparação com ${home < outside ? "comprar fora" : "cozinhar em casa"}.`;
+}
+export function mealReportedTimeText(result: MealResult): string {
+  return `Tempo estimado em casa: ${result.time.home.weekly.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} horas por semana, considerando somente os tempos informados. Refeições sem tempo de preparo preenchido não têm duração estimada. O tempo de comprar/comer fora não foi informado; não há comparação de tempo entre as alternativas.`;
+}

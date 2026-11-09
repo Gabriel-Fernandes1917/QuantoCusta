@@ -144,7 +144,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .money-field { min-width: 0; }
 .money-field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.5; }
 .money-control { display: flex; align-items: center; gap: 10px; padding-left: 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-raised); }
-.money-control > span { font-size: 14px; color: var(--muted); }
+.money-control > span { flex-shrink: 0; white-space: nowrap; font-size: 14px; color: var(--muted); }
 .money-control input { width: 100%; min-width: 0; padding: 14px 10px 14px 0; background: transparent; border: 0; font-size: 16px; color: var(--ink); border-radius: 6px; }
 .money-control:has(input[aria-invalid="true"]) { border-color: var(--error); }
 .field-hint { font-size: 12px; line-height: 1.7; color: var(--muted); margin-top: 8px; }
@@ -194,10 +194,43 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .vehicle-subsection { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 24px; }
 .vehicle-subsection h4 { font-size: 17px; font-weight: 650; margin: 0 0 12px; }
 .vehicle-field { min-width: 0; }
-.period-control { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-.period-control label { font-size: 12px; color: var(--muted); flex: 1 1 100px; }
-.period-control select { background: var(--surface-muted); color: var(--ink); border: 1px solid var(--border-strong); border-radius: 6px; padding: 10px; min-height: 44px; font-size: 16px; max-width: 100%; }
-.period-control select:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.money-control-with-period { gap: 8px; }
+.money-control-with-period > span { flex-shrink: 0; }
+.money-control-with-period input { flex: 1; width: 0; }
+.money-period-select {
+  color-scheme: light;
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 44px;
+  padding: 0 30px 0 10px;
+  border: 0;
+  border-radius: 0 7px 7px 0;
+  background-color: var(--surface-raised);
+  color: var(--ink);
+  /* Seta sem a área de fundo desenhada pelo navegador; o menu continua nativo. */
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 15px center, right 10px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.money-period-select option { color-scheme: inherit; color: var(--ink); background-color: var(--surface-raised); }
+.money-period-select option:checked { color: var(--on-accent); background-color: var(--green); }
+:root[data-theme="dark"] .money-period-select { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .money-period-select { color-scheme: dark; }
+}
+.money-control-with-period:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.money-control-with-period input:focus-visible { outline: none; }
+.money-period-select:focus-visible { outline: 2px solid var(--focus); outline-offset: -4px; }
+@media (forced-colors: active) {
+  .money-period-select { appearance: auto; -webkit-appearance: auto; background-image: none; padding-right: 10px; }
+  .money-period-select option:checked { color: HighlightText; background-color: Highlight; }
+}
 .export-panel { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
 .export-panel h3 { font-size: 18px; font-weight: 650; margin-bottom: 12px; line-height: 1.4; }
 .export-panel > p:not(.field-hint):not(.calculator-notice) { font-size: 14px; line-height: 1.8; color: var(--muted); }
@@ -209,6 +242,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .property-columns > * { min-width: 0; overflow-wrap: anywhere; }
 .comparison-area .result-explanation, .comparison-detail { min-width: 0; overflow-wrap: anywhere; }
 .property-form { min-width: 0; }
+.property-comparison-calculator .money-control > span { flex-shrink: 0; white-space: nowrap; }
+.property-comparison-calculator .property-form .money-grid { grid-template-columns: minmax(0, 1fr); }
 .property-form > h2 { font-size: 25px; margin-bottom: 20px; }
 .plain-field { margin-bottom: 20px; }
 .plain-field label, .custom-cost > label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
@@ -240,12 +275,26 @@ select:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 .comparison-detail h3 { font-size: 20px; }
 .detail-card { background: var(--background); padding: 16px; border-radius: 8px; margin-top: 12px; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
 .detail-card > span { display: block; color: var(--muted); font-size: 12px; }
+.property-report-summary { margin-top: 24px; padding: 20px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-accent); overflow-wrap: anywhere; }
+.property-report-summary h3 { font-size: 22px; line-height: 1.4; }
+.property-report-summary p { margin-top: 12px; line-height: 1.7; }
+.property-report-savings, .property-report-amounts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.property-report-savings dd { margin: 6px 0 0; font-size: clamp(24px, 4vw, 32px); font-weight: 700; font-variant-numeric: tabular-nums; }
+.property-report-amounts dd { margin: 4px 0 0; }
+.property-report-amounts dt { font-weight: 600; }
+.property-report-conclusion { margin-top: 16px; line-height: 1.7; }
+@media (min-width: 600px) { .property-report-savings, .property-report-amounts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .comparison-results > details > summary { min-height: 44px; cursor: pointer; }
 @media (min-width: 800px) { .property-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Alimentação: reaproveita os campos, seções e cards existentes. */
 .meal-calculator h4 { font-size: 16px; font-weight: 650; line-height: 1.6; }
 .meal-ingredient { margin-block: 16px; }
+.meal-calculator .meal-purchased-quantity .money-period-select { width: auto; max-width: 55%; min-width: 0; }
+.meal-calculator .meal-duration { margin-top: 24px; }
+.meal-calculator .meal-duration-control { position: relative; }
+.meal-calculator .meal-duration-control input { padding-right: 90px; }
+.meal-calculator .meal-duration-control > span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; white-space: nowrap; pointer-events: none; }
 .meal-remove { border: 0; background: transparent; text-decoration: underline; padding: 8px 0; margin-top: 12px; color: var(--green); }
 .meal-outside-title, .meal-optional, .meal-new { margin-top: 24px; }
 .meal-results .property-columns, .meal-results .result-explanation { margin-top: 24px; }

@@ -31,7 +31,8 @@ export function decodeSimulation(text: string): Simulation {
     if (!record.vehiclePeriods || typeof record.vehiclePeriods !== "object") throw new Error("Periodicidade inválida.");
     const periods = record.vehiclePeriods as Record<string, unknown>;
     annualVehicleFieldIds.forEach(id => {
-      const period = periods[id];
+      // Simula??es anteriores n?o tinham periodicidade para manuten??o.
+      const period = id === "maintenance" && periods[id] === undefined ? "monthly" : periods[id];
       if (period !== "monthly" && period !== "annual") throw new Error("Periodicidade inválida.");
       values.vehiclePeriods[id] = period;
     });

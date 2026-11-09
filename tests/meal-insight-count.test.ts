@@ -33,9 +33,9 @@ describe("insights conforme a quantidade efetiva de refeições", () => {
     expect(result.distribution[0].home).toBeCloseTo(100 / count);
     expect(result.homeMonthly).toBe(13000 * count);
   });
-  it("vários cards não configurados ou desmarcados não contam", () => {
+  it("cards incompletos não contam", () => {
     const values = routine();
-    values.meals[1] = { ...values.meals[0], id: "meal-1", enabled: false, ingredients: [{ ...values.meals[0].ingredients[0], id: "disabled-item" }] };
+    values.meals[1] = { ...values.meals[0], id: "meal-1", enabled: false, outside: null, ingredients: [{ ...values.meals[0].ingredients[0], id: "disabled-item" }] };
     const result = calculateMealRoutine(values);
     expect(values.meals).toHaveLength(4); expect(result.meals).toHaveLength(1);
     expect(mealInsights(result)).toHaveLength(1); expect(mealInsights(result).join(" ")).not.toMatch(ranking);
@@ -62,7 +62,7 @@ describe("insights conforme a quantidade efetiva de refeições", () => {
     const insights = sheets[0].data.filter(row => row[0] === "Comparação por refeição");
     expect(insights).toHaveLength(1); expect(insights[0][1]).toMatchObject({ value: mealInsights(result)[0] });
     expect(sheets[1].data).toHaveLength(2);
-    expect(sheets[1].data[1].slice(7, 10)).toMatchObject([{ value: 130 }, { value: 260 }, { value: 130 }]);
+    expect(sheets[1].data[1].slice(7, 10)).toMatchObject([{ value: 130 }, { value: 260 }, "Cozinhar em casa economiza R$ 130,00 por mês em comparação com comprar fora."]);
     expect(sheets[1].data[1].slice(13)).toMatchObject([{ value: 100 }, { value: 100 }]);
   });
 });

@@ -3,6 +3,25 @@ import { calculateCostOfLiving, emptySimulation } from "../src/lib/calculations/
 import { decodeSimulation, encodeSimulation } from "../src/lib/simulation-storage";
 
 describe("persistência da simulação", () => {
+  it("restaura manutenção mensal de simulações salvas antes do seletor", () => {
+    const values = { ...emptySimulation(), hasVehicle: true, maintenance: 12000 };
+    const { maintenance, ...oldPeriods } = values.vehiclePeriods;
+    void maintenance;
+    const restored = decodeSimulation(JSON.stringify({ version: 2, values: { ...values, vehiclePeriods: oldPeriods } }));
+    expect(restored.vehiclePeriods.maintenance).toBe("monthly");
+    expect(calculateCostOfLiving(restored).monthlyExpenses).toBe(12000);
+  });
+  it("salva e restaura manutenção anual sem converter o valor original", () => {
+    const values = { ...emptySimulation(), hasVehicle: true, maintenance: 120000 };
+    values.vehiclePeriods.maintenance = "annual";
+    const restored = decodeSimulation(encodeSimulation(values));
+    expect(restored).toEqual(values);
+    expect(calculateCostOfLiving(restored).monthlyExpenses).toBe(10000);
+  });
+  it.each(["weekly", null, 1])("rejeita periodicidade de manutenção inválida: %s", maintenance => {
+    const values = emptySimulation();
+    expect(() => decodeSimulation(JSON.stringify({ version: 2, values: { ...values, vehiclePeriods: { ...values.vehiclePeriods, maintenance } } }))).toThrow();
+  });
   it("preserva os centavos ao salvar e restaurar", () => {
     const values = { ...emptySimulation(), salary: 500000, rent: 123456, foodBenefits: 40000, benefitUse: 10000 };
     expect(decodeSimulation(encodeSimulation(values))).toEqual(values);
@@ -17,7 +36,7 @@ describe("persistência da simulação", () => {
     expect(() => encodeSimulation({ ...emptySimulation(), rent: -1 })).toThrow();
   });
   it("restaura decisão do veículo e valores anuais originais", () => {
-    const values = { ...emptySimulation(), hasVehicle: true, vehicleTax: 240000, vehicleInsurance: 300000, vehiclePeriods: { vehicleTax: "annual", vehicleFees: "annual", vehicleInsurance: "annual" } as const };
+    const values = { ...emptySimulation(), hasVehicle: true, vehicleTax: 240000, vehicleInsurance: 300000, vehiclePeriods: { maintenance: "monthly", vehicleTax: "annual", vehicleFees: "annual", vehicleInsurance: "annual" } as const };
     const restored = decodeSimulation(encodeSimulation(values));
     expect(restored).toEqual(values);
     expect(calculateCostOfLiving(restored).monthlyExpenses).toBe(45000);
@@ -42,6 +61,6 @@ describe("persistência da simulação", () => {
     expect(restored.hasVehicle).toBeNull();
   });
   it.each(["weekly", null, 1])("rejeita periodicidade corrompida: %s", period => {
-    expect(() => decodeSimulation(JSON.stringify({ version: 2, values: { ...emptySimulation(), vehiclePeriods: { vehicleTax: period, vehicleFees: "annual", vehicleInsurance: "monthly" } } }))).toThrow();
+    expect(() => decodeSimulation(JSON.stringify({ version: 2, values: { ...emptySimulation(), vehiclePeriods: { maintenance: "monthly", vehicleTax: period, vehicleFees: "annual", vehicleInsurance: "monthly" } } }))).toThrow();
   });
 });
